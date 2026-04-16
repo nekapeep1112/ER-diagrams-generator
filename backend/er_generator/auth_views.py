@@ -1,113 +1,99 @@
+import datetime
 import jwt
-import requests
+from django.conf import settings
+from django.contrib.auth import get_user_model
 from rest_framework import status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.conf import settings
-from django.contrib.auth.models import User
 from drf_spectacular.utils import extend_schema
 
 from .authentication import JWTAuthentication
+from .models import UserProfile
+from .serializers import RegisterSerializer, LoginSerializer, UserProfileUpdateSerializer
+
+User = get_user_model()
 
 
 def generate_jwt_token(user):
-    """Генерирует JWT токен для пользователя."""
+    """Генерирует JWT токен с истечением срока действия."""
     payload = {
         'user_id': user.id,
         'username': user.username,
         'email': user.email,
+        'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=settings.JWT_EXPIRATION_HOURS),
     }
-    token = jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
-    return token
+    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
-class GitHubLoginView(APIView):
-    """Авторизация через GitHub OAuth."""
+class RegisterView(APIView):
+    """Регистрация нового пользователя."""
     authentication_classes = []
     permission_classes = [permissions.AllowAny]
 
     @extend_schema(
-        summary="Авторизация через GitHub",
-        description="Обменивает code на access token GitHub и создаёт/находит пользователя",
-        request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'code': {'type': 'string', 'description': 'Authorization code от GitHub'},
-                },
-                'required': ['code'],
+        summary="Регистрация",
+        description="Создаёт нового пользователя по email и паролю",
+        request=RegisterSerializer,
+        responses={201: dict},
+    )
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = User.objects.create_user(
+            username=serializer.validated_data['username'],
+            email=serializer.validated_data['email'],
+            password=serializer.validated_data['password'],
+        )
+        UserProfile.objects.create(user=user)
+
+        token = generate_jwt_token(user)
+        return Response({
+            'token': token,
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'username': user.username,
             }
-        },
+        }, status=status.HTTP_201_CREATED)
+
+
+class LoginView(APIView):
+    """Вход по email и паролю."""
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        summary="Вход",
+        description="Аутентификация по email и паролю, возвращает JWT токен",
+        request=LoginSerializer,
         responses={200: dict},
     )
     def post(self, request):
-        code = request.data.get('code')
-        if not code:
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            user = User.objects.get(email=serializer.validated_data['email'])
+        except User.DoesNotExist:
             return Response(
-                {'error': 'Code is required'},
-                status=status.HTTP_400_BAD_REQUEST
+                {'error': 'Неверный email или пароль'},
+                status=status.HTTP_401_UNAUTHORIZED
             )
 
-        # Обмен code на access token
-        token_response = requests.post(
-            'https://github.com/login/oauth/access_token',
-            headers={'Accept': 'application/json'},
-            data={
-                'client_id': settings.GITHUB_CLIENT_ID,
-                'client_secret': settings.GITHUB_CLIENT_SECRET,
-                'code': code,
-            }
-        )
-
-        token_data = token_response.json()
-        access_token = token_data.get('access_token')
-
-        if not access_token:
+        if not user.check_password(serializer.validated_data['password']):
             return Response(
-                {'error': 'Failed to get access token', 'details': token_data},
-                status=status.HTTP_400_BAD_REQUEST
+                {'error': 'Неверный email или пароль'},
+                status=status.HTTP_401_UNAUTHORIZED
             )
 
-        # Получение информации о пользователе
-        user_response = requests.get(
-            'https://api.github.com/user',
-            headers={
-                'Authorization': f'Bearer {access_token}',
-                'Accept': 'application/json',
-            }
-        )
-
-        user_data = user_response.json()
-        github_id = user_data.get('id')
-        username = user_data.get('login')
-        email = user_data.get('email') or f'{username}@github.local'
-        avatar_url = user_data.get('avatar_url')
-
-        if not github_id:
-            return Response(
-                {'error': 'Failed to get user info'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Создание или получение пользователя
-        user, created = User.objects.get_or_create(
-            username=f'github_{github_id}',
-            defaults={
-                'email': email,
-                'first_name': user_data.get('name', '') or username,
-            }
-        )
-
-        # Генерация JWT токена
-        jwt_token = generate_jwt_token(user)
-
+        token = generate_jwt_token(user)
         return Response({
-            'token': jwt_token,
+            'token': token,
             'user': {
                 'id': user.id,
-                'username': user.username,
                 'email': user.email,
-                'avatar_url': avatar_url,
+                'username': user.username,
             }
         })
 
@@ -118,14 +104,51 @@ class UserProfileView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(
-        summary="Получить профиль пользователя",
+        summary="Получить профиль",
         responses={200: dict},
     )
     def get(self, request):
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
         return Response({
             'id': request.user.id,
-            'username': request.user.username,
             'email': request.user.email,
+            'username': request.user.username,
+            'avatar_url': request.user.avatar_url,
+            'bio': profile.bio,
+            'default_sql_dialect': profile.default_sql_dialect,
+        })
+
+    @extend_schema(
+        summary="Обновить профиль",
+        request=UserProfileUpdateSerializer,
+        responses={200: dict},
+    )
+    def patch(self, request):
+        serializer = UserProfileUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        data = serializer.validated_data
+
+        if 'username' in data:
+            request.user.username = data['username']
+            request.user.save(update_fields=['username'])
+        if 'avatar_url' in data:
+            request.user.avatar_url = data['avatar_url']
+            request.user.save(update_fields=['avatar_url'])
+        if 'bio' in data:
+            profile.bio = data['bio']
+        if 'default_sql_dialect' in data:
+            profile.default_sql_dialect = data['default_sql_dialect']
+        profile.save()
+
+        return Response({
+            'id': request.user.id,
+            'email': request.user.email,
+            'username': request.user.username,
+            'avatar_url': request.user.avatar_url,
+            'bio': profile.bio,
+            'default_sql_dialect': profile.default_sql_dialect,
         })
 
 
@@ -139,9 +162,7 @@ class VerifyTokenView(APIView):
         request={
             'application/json': {
                 'type': 'object',
-                'properties': {
-                    'token': {'type': 'string'},
-                },
+                'properties': {'token': {'type': 'string'}},
                 'required': ['token'],
             }
         },
@@ -162,8 +183,8 @@ class VerifyTokenView(APIView):
                 'valid': True,
                 'user': {
                     'id': user.id,
-                    'username': user.username,
                     'email': user.email,
+                    'username': user.username,
                 }
             })
         except jwt.ExpiredSignatureError:
@@ -172,52 +193,3 @@ class VerifyTokenView(APIView):
             return Response({'valid': False, 'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
         except User.DoesNotExist:
             return Response({'valid': False, 'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-
-
-class DevLoginView(APIView):
-    """Временный endpoint для тестирования (только в DEBUG режиме)."""
-    authentication_classes = []
-    permission_classes = [permissions.AllowAny]
-
-    @extend_schema(
-        summary="Тестовая авторизация (только для разработки)",
-        description="Создаёт тестового пользователя и возвращает токен. Работает только при DEBUG=True",
-        request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'username': {'type': 'string', 'default': 'testuser'},
-                },
-            }
-        },
-        responses={200: dict},
-    )
-    def post(self, request):
-        if not settings.DEBUG:
-            return Response(
-                {'error': 'This endpoint is only available in DEBUG mode'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        username = request.data.get('username', 'testuser')
-
-        # Создаём или получаем тестового пользователя
-        user, created = User.objects.get_or_create(
-            username=username,
-            defaults={
-                'email': f'{username}@test.local',
-                'first_name': 'Test',
-            }
-        )
-
-        # Генерация JWT токена
-        jwt_token = generate_jwt_token(user)
-
-        return Response({
-            'token': jwt_token,
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-            }
-        })

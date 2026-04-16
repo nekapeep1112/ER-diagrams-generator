@@ -27,10 +27,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'drf_spectacular',
-    'social_django',
     # Local apps
     'er_generator.apps.ErGeneratorConfig',
 ]
+
+AUTH_USER_MODEL = 'er_generator.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -62,6 +63,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'core.wsgi.application'
+ASGI_APPLICATION = 'core.asgi.application'
 
 # Database - PostgreSQL
 DATABASES = {
@@ -139,10 +141,6 @@ SPECTACULAR_SETTINGS = {
 # OpenAI settings
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4o')
-
-# GitHub OAuth settings
-GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID', '')
-GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET', '')
 
 # JWT settings
 JWT_SECRET = os.getenv('JWT_SECRET', SECRET_KEY)

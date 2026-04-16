@@ -1,0 +1,63 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python*)",
+      "Bash(pip*)",
+      "Bash(pip3*)",
+      "Bash(npm*)",
+      "Bash(npx*)",
+      "Bash(python manage.py runserver*)",
+      "Bash(python manage.py migrate*)",
+      "Bash(python manage.py makemigrations*)",
+      "Bash(python manage.py shell*)",
+      "Bash(python manage.py test*)",
+      "Bash(python manage.py createsuperuser*)",
+      "Bash(python manage.py collectstatic*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git checkout*)",
+      "Bash(git branch*)",
+      "Bash(git stash*)",
+      "Bash(git pull*)",
+      "Bash(flake8*)",
+      "Bash(black --check*)",
+      "Bash(black --diff*)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -f*)",
+      "Bash(rm -rf*)",
+      "Bash(del /f*)",
+      "Bash(DROP TABLE*)",
+      "Bash(DROP DATABASE*)",
+      "Bash(python manage.py flush*)",
+      "Bash(python manage.py reset_db*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=\"$CLAUDE_FILE_PATHS\"; if [[ \"$FILE\" == *.py ]]; then cd \"c:/Users/Полина/Desktop/proj/ERDatabase/backend\" && python -m flake8 \"$FILE\" --max-line-length=120 --ignore=E501,W503 2>&1 | head -20 || true; fi'"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=\"$CLAUDE_FILE_PATHS\"; if [[ \"$FILE\" == */models.py ]]; then echo \"⚠️  models.py changed — не забудь запустить: python manage.py makemigrations\"; fi'"
+          }
+        ]
+      }
+    ]
+  }
+}

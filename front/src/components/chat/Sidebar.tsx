@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { GripVertical, X, ChevronLeft, Plus } from 'lucide-react';
+import { GripVertical, X, ChevronLeft, Plus, MessageSquare, BookOpen } from 'lucide-react';
 import ChatList from './ChatList';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
-import type { ChatListResponse, ChatDetailResponse, SqlDialect } from '@/types';
+import LibraryPanel from './LibraryPanel';
+import type { ChatListResponse, ChatDetailResponse, SqlDialect, ERData } from '@/types';
+
+type SidebarTab = 'chats' | 'library';
 
 interface SidebarProps {
   chats: ChatListResponse[];
@@ -16,6 +19,7 @@ interface SidebarProps {
   onDeleteChat: (chatId: string) => void;
   onSendMessage: (message: string, sqlDialect: SqlDialect) => void;
   onHideSidebar: () => void;
+  onLoadSchema: (erData: ERData, sql: string) => void;
 }
 
 export default function Sidebar({
@@ -27,9 +31,11 @@ export default function Sidebar({
   onDeleteChat,
   onSendMessage,
   onHideSidebar,
+  onLoadSchema,
 }: SidebarProps) {
   const [width, setWidth] = useState(480);
   const [isResizing, setIsResizing] = useState(false);
+  const [activeTab, setActiveTab] = useState<SidebarTab>('chats');
   const sidebarRef = useRef<HTMLElement>(null);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -69,14 +75,47 @@ export default function Sidebar({
       {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent pointer-events-none" />
 
-      {/* Chat list (when no chat selected) */}
+      {/* Tab bar — only when no chat open */}
       {!currentChat && (
+        <div className="flex border-b border-[#1e1e2e] shrink-0">
+          <button
+            onClick={() => setActiveTab('chats')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'chats'
+                ? 'text-cyan-400 border-b-2 border-cyan-500'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            <MessageSquare size={15} />
+            Чаты
+          </button>
+          <button
+            onClick={() => setActiveTab('library')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'library'
+                ? 'text-purple-400 border-b-2 border-purple-500'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            <BookOpen size={15} />
+            Библиотека
+          </button>
+        </div>
+      )}
+
+      {/* Chat list */}
+      {!currentChat && activeTab === 'chats' && (
         <ChatList
           chats={chats}
           currentChatId={null}
           onSelectChat={onSelectChat}
           onDeleteChat={onDeleteChat}
         />
+      )}
+
+      {/* Library */}
+      {!currentChat && activeTab === 'library' && (
+        <LibraryPanel onLoadSchema={onLoadSchema} />
       )}
 
       {/* Current chat view */}
@@ -136,8 +175,8 @@ export default function Sidebar({
         />
       </div>
 
-      {/* Floating new chat button */}
-      {!currentChat && (
+      {/* Floating new chat button — only on chats tab */}
+      {!currentChat && activeTab === 'chats' && (
         <button
           onClick={onCreateChat}
           disabled={isLoading}

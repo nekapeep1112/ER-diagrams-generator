@@ -1,7 +1,7 @@
 import json
-import os
+import asyncio
 from pathlib import Path
-from openai import OpenAI
+from openai import AsyncOpenAI
 from django.conf import settings
 
 
@@ -12,40 +12,25 @@ def get_system_prompt() -> str:
         return f.read()
 
 
-def get_openai_client() -> OpenAI:
-    """Создает клиент OpenAI."""
-    return OpenAI(api_key=settings.OPENAI_API_KEY)
+def get_openai_client() -> AsyncOpenAI:
+    """Создает асинхронный клиент OpenAI."""
+    return AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
 
-def generate_er_model(chat_history: list[dict], sql_dialect: str = 'PostgreSQL') -> dict:
+async def _generate_er_model_async(chat_history: list[dict], sql_dialect: str = 'PostgreSQL') -> dict:
     """
-    Генерирует ER-модель, SQL код и текстовый ответ на основе истории чата.
-
-    Args:
-        chat_history: Список сообщений в формате [{"role": "user/assistant", "content": "..."}]
-        sql_dialect: Диалект SQL для генерации кода (PostgreSQL, MySQL, SQLite, SQL Server, Oracle)
-
-    Returns:
-        dict: {
-            "message": "Текстовый ответ/резюме",
-            "er_data": {"nodes": [...], "edges": [...]} или null,
-            "sql": "SQL DDL код" или null
-        }
+    Асинхронная генерация ER-модели.
     """
     client = get_openai_client()
     system_prompt = get_system_prompt()
 
-    # Добавляем информацию о выбранном диалекте SQL в system prompt
     dialect_info = f"\n\n## Текущий диалект SQL\n\nПользователь выбрал диалект: **{sql_dialect}**. Генерируй SQL код именно для этого диалекта."
     full_system_prompt = system_prompt + dialect_info
 
-    # Формируем сообщения для OpenAI
     messages = [{"role": "system", "content": full_system_prompt}]
-
-    # Добавляем историю чата
     messages.extend(chat_history)
 
-    response = client.chat.completions.create(
+    response = await client.chat.completions.create(
         model=settings.OPENAI_MODEL,
         messages=messages,
         response_format={"type": "json_object"},
@@ -59,39 +44,28 @@ def generate_er_model(chat_history: list[dict], sql_dialect: str = 'PostgreSQL')
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON response from OpenAI: {e}")
 
-    # Валидация структуры
     if 'message' not in data:
         raise ValueError("Response must contain 'message' field")
 
-    # er_data может быть null (для вопросов без схемы)
     er_data = data.get('er_data')
     if er_data is not None:
         if 'nodes' not in er_data or 'edges' not in er_data:
             raise ValueError("er_data must contain 'nodes' and 'edges' fields")
 
-    # sql может быть null (для вопросов без схемы)
-    sql = data.get('sql')
-
     return {
         'message': data['message'],
         'er_data': er_data,
-        'sql': sql
+        'sql': data.get('sql')
     }
 
 
-def generate_chat_title(prompt: str) -> str:
+async def _generate_chat_title_async(prompt: str) -> str:
     """
-    Генерирует краткое название для чата на основе промпта пользователя.
-
-    Args:
-        prompt: Промпт пользователя
-
-    Returns:
-        str: Краткое название для чата (макс. 50 символов)
+    Асинхронная генерация названия чата.
     """
     client = get_openai_client()
 
-    response = client.chat.completions.create(
+    response = await client.chat.completions.create(
         model=settings.OPENAI_MODEL,
         messages=[
             {
@@ -111,5 +85,47 @@ def generate_chat_title(prompt: str) -> str:
     )
 
     title = response.choices[0].message.content.strip()
-    # Обрезаем до 50 символов если нужно
     return title[:50] if len(title) > 50 else title
+
+
+def generate_er_model(chat_history: list[dict], sql_dialect: str = 'PostgreSQL') -> dict:
+    """
+    Синхронная обёртка для генерации ER-модели.
+    Запускает async код в event loop.
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # Если уже есть running loop (например, в ASGI), создаём новый в треде
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(
+                    asyncio.run,
+                    _generate_er_model_async(chat_history, sql_dialect)
+                )
+                return future.result()
+        else:
+            return loop.run_until_complete(_generate_er_model_async(chat_history, sql_dialect))
+    except RuntimeError:
+        # Нет event loop - создаём новый
+        return asyncio.run(_generate_er_model_async(chat_history, sql_dialect))
+
+
+def generate_chat_title(prompt: str) -> str:
+    """
+    Синхронная обёртка для генерации названия чата.
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(
+                    asyncio.run,
+                    _generate_chat_title_async(prompt)
+                )
+                return future.result()
+        else:
+            return loop.run_until_complete(_generate_chat_title_async(prompt))
+    except RuntimeError:
+        return asyncio.run(_generate_chat_title_async(prompt))

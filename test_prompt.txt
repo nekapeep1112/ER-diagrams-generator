@@ -1,0 +1,49 @@
+Создай ER-диаграмму базы данных приложения ER Database Generator. Используй PostgreSQL.
+
+Таблица users — пользователи системы:
+
+id (BIGSERIAL, PRIMARY KEY)
+email (VARCHAR 254, UNIQUE, NOT NULL) — используется как логин
+username (VARCHAR 150, UNIQUE, NOT NULL)
+password (VARCHAR 128, NOT NULL)
+avatar_url (VARCHAR 200, nullable)
+is_active (BOOLEAN, default true)
+is_staff (BOOLEAN, default false)
+date_joined (TIMESTAMP, NOT NULL)
+Таблица user_profiles — расширенный профиль, связь 1:1 с users:
+
+id (BIGSERIAL, PRIMARY KEY)
+user_id (BIGINT, FK → users.id, UNIQUE, NOT NULL)
+bio (TEXT, nullable)
+default_sql_dialect (VARCHAR 20, default 'PostgreSQL')
+Таблица chats — диалоги пользователя с AI:
+
+id (UUID, PRIMARY KEY)
+user_id (BIGINT, FK → users.id, nullable)
+title (VARCHAR 255, NOT NULL, default 'Новый чат')
+created_at (TIMESTAMP)
+updated_at (TIMESTAMP)
+Таблица messages — сообщения внутри чата:
+
+id (UUID, PRIMARY KEY)
+chat_id (UUID, FK → chats.id, NOT NULL)
+role (VARCHAR 10, NOT NULL) — значения: 'user' или 'assistant'
+content (TEXT, NOT NULL)
+er_data (JSON, nullable) — сгенерированная ER-схема в формате nodes/edges
+sql (TEXT, nullable) — сгенерированный SQL-код
+created_at (TIMESTAMP)
+Таблица saved_schemas — схемы, сохранённые пользователем в библиотеку:
+
+id (UUID, PRIMARY KEY)
+user_id (BIGINT, FK → users.id, NOT NULL)
+name (VARCHAR 255, NOT NULL)
+er_data (JSON, NOT NULL)
+sql (TEXT)
+created_at (TIMESTAMP)
+updated_at (TIMESTAMP)
+Связи:
+
+users → user_profiles: 1:1 (у каждого пользователя ровно один профиль)
+users → chats: 1:N (пользователь может иметь много чатов)
+users → saved_schemas: 1:N (пользователь может сохранить много схем)
+chats → messages: 1:N (в каждом чате много сообщений)

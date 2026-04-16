@@ -2,9 +2,9 @@ from rest_framework import status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
-from .models import Chat, Message
+from .models import Chat, Message, SavedSchema
 from .serializers import (
     ChatListSerializer,
     ChatDetailSerializer,
@@ -12,6 +12,8 @@ from .serializers import (
     ChatUpdateSerializer,
     MessageCreateSerializer,
     MessageSerializer,
+    SavedSchemaSerializer,
+    SavedSchemaCreateSerializer,
 )
 from .services.openai_service import generate_er_model, generate_chat_title
 from .authentication import JWTAuthentication
@@ -40,13 +42,12 @@ class ChatListView(APIView):
     )
     def post(self, request):
         serializer = ChatCreateSerializer(data=request.data)
-        if serializer.is_valid():
-            chat = serializer.save(user=request.user)
-            return Response(
-                ChatDetailSerializer(chat).data,
-                status=status.HTTP_201_CREATED
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        title = serializer.validated_data.get('title', 'Новый чат')
+        chat = Chat.objects.create(user=request.user, title=title)
+        return Response(ChatDetailSerializer(chat).data, status=status.HTTP_201_CREATED)
 
 
 class ChatDetailView(APIView):
@@ -59,7 +60,7 @@ class ChatDetailView(APIView):
         description="Возвращает чат со всеми сообщениями (только свой чат)",
         responses={
             200: ChatDetailSerializer,
-            404: OpenApiResponse(description="Чат не найден или не принадлежит пользователю"),
+            404: OpenApiResponse(description="Чат не найден"),
         },
     )
     def get(self, request, chat_id):
@@ -76,10 +77,11 @@ class ChatDetailView(APIView):
     def patch(self, request, chat_id):
         chat = get_object_or_404(Chat, id=chat_id, user=request.user)
         serializer = ChatUpdateSerializer(chat, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(ChatDetailSerializer(chat).data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer.save()
+        return Response(ChatDetailSerializer(chat).data)
 
     @extend_schema(
         summary="Удалить чат",
@@ -110,7 +112,6 @@ class MessageView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # Получаем диалект SQL из запроса
         sql_dialect = serializer.validated_data.get('sql_dialect', 'PostgreSQL')
 
         # Сохраняем сообщение пользователя
@@ -127,7 +128,7 @@ class MessageView(APIView):
         ]
 
         try:
-            # Вызываем OpenAI с полным контекстом и выбранным диалектом
+            # Генерация ER-модели (асинхронный OpenAI внутри, но синхронный интерфейс)
             result = generate_er_model(chat_history, sql_dialect=sql_dialect)
 
             # Сохраняем ответ ассистента
@@ -172,8 +173,8 @@ class GenerateTitleView(APIView):
     )
     def post(self, request, chat_id):
         chat = get_object_or_404(Chat, id=chat_id, user=request.user)
-        prompt = request.data.get('prompt')
 
+        prompt = request.data.get('prompt')
         if not prompt:
             return Response(
                 {'error': 'Prompt is required'},
@@ -195,3 +196,43 @@ class GenerateTitleView(APIView):
                 {'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class SavedSchemaListView(APIView):
+    """Список сохранённых схем и создание новой."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        summary="Список сохранённых схем",
+        responses={200: SavedSchemaSerializer(many=True)},
+    )
+    def get(self, request):
+        schemas = SavedSchema.objects.filter(user=request.user)
+        return Response(SavedSchemaSerializer(schemas, many=True).data)
+
+    @extend_schema(
+        summary="Сохранить схему",
+        request=SavedSchemaCreateSerializer,
+        responses={201: SavedSchemaSerializer},
+    )
+    def post(self, request):
+        serializer = SavedSchemaCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        schema = SavedSchema.objects.create(user=request.user, **serializer.validated_data)
+        return Response(SavedSchemaSerializer(schema).data, status=status.HTTP_201_CREATED)
+
+
+class SavedSchemaDetailView(APIView):
+    """Управление конкретной сохранённой схемой."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        summary="Удалить сохранённую схему",
+        responses={204: None},
+    )
+    def delete(self, request, schema_id):
+        schema = get_object_or_404(SavedSchema, id=schema_id, user=request.user)
+        schema.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react';
 import Sidebar from '@/components/chat/Sidebar';
 import ERCanvas from '@/components/er-diagram/ERCanvas';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import AuthForm from '@/components/auth/AuthForm';
 import { useStore } from '@/store/useStore';
 import { authApi, chatsApi, messagesApi } from '@/lib/api';
-import type { ERData, SqlDialect } from '@/types';
+import type { AuthResponse, ERData, SqlDialect } from '@/types';
 
 export default function Home() {
   const {
@@ -29,22 +30,25 @@ export default function Home() {
   } = useStore();
 
   const [erData, setErData] = useState<ERData | null>(null);
+  const [currentSql, setCurrentSql] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
 
-  // Initial auth check
+  // Initial auth check — restore session from localStorage
   useEffect(() => {
     const initAuth = async () => {
+      const savedToken = localStorage.getItem('token');
+      if (!savedToken) {
+        setIsAuthLoading(false);
+        return;
+      }
       try {
-        // Always do dev-login to ensure fresh token
-        const response = await authApi.devLogin();
-        setToken(response.token);
-        setUser(response.user);
-      } catch (error) {
-        console.error('Auth failed:', error);
-        // Clear any stale tokens
+        setToken(savedToken);
+        const me = await authApi.getMe();
+        setUser(me);
+      } catch {
         localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        setToken(null);
       } finally {
         setIsAuthLoading(false);
       }
@@ -52,6 +56,17 @@ export default function Home() {
 
     initAuth();
   }, [setToken, setUser]);
+
+  const handleAuthSuccess = (response: AuthResponse) => {
+    setToken(response.token);
+    setUser(response.user);
+  };
+
+  const handleLoadSchema = (schemaErData: ERData, sql: string) => {
+    setErData(schemaErData);
+    setCurrentSql(sql);
+    setCurrentChat(null);
+  };
 
   // Load chats when authenticated
   useEffect(() => {
@@ -73,6 +88,7 @@ export default function Home() {
     if (!chatId) {
       setCurrentChat(null);
       setErData(null);
+      setCurrentSql(null);
       return;
     }
 
@@ -87,8 +103,10 @@ export default function Home() {
         .find((m) => m.er_data);
       if (lastMessageWithER?.er_data) {
         setErData(lastMessageWithER.er_data);
+        setCurrentSql(lastMessageWithER.sql ?? null);
       } else {
         setErData(null);
+        setCurrentSql(null);
       }
     } catch (error) {
       console.error('Failed to load chat:', error);
@@ -110,6 +128,7 @@ export default function Home() {
       });
       setCurrentChat(chat);
       setErData(null);
+      setCurrentSql(null);
     } catch (error) {
       console.error('Failed to create chat:', error);
     } finally {
@@ -176,6 +195,7 @@ export default function Home() {
         // Update ER data if present
         if (messageResponse.assistant_message.er_data) {
           setErData(messageResponse.assistant_message.er_data);
+          setCurrentSql(messageResponse.assistant_message.sql ?? null);
         }
       } else {
         // Just send message
@@ -197,6 +217,7 @@ export default function Home() {
         // Update ER data if present
         if (response.assistant_message.er_data) {
           setErData(response.assistant_message.er_data);
+          setCurrentSql(response.assistant_message.sql ?? null);
         }
       }
     } catch (error) {
@@ -222,6 +243,10 @@ export default function Home() {
     );
   }
 
+  if (!token) {
+    return <AuthForm onSuccess={handleAuthSuccess} />;
+  }
+
   return (
     <div className="h-screen flex bg-[#0a0a0f]">
       {/* Sidebar */}
@@ -235,12 +260,14 @@ export default function Home() {
           onDeleteChat={handleDeleteChat}
           onSendMessage={handleSendMessage}
           onHideSidebar={() => setIsSidebarVisible(false)}
+          onLoadSchema={handleLoadSchema}
         />
       )}
 
       {/* ER Canvas */}
       <ERCanvas
         erData={erData}
+        currentSql={currentSql}
         user={user}
         onLogout={logout}
         isSidebarVisible={isSidebarVisible}

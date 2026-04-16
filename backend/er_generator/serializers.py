@@ -1,7 +1,57 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
-from .models import Chat, Message
+from .models import Chat, Message, SavedSchema
 
+User = get_user_model()
+
+
+# --- Auth serializers ---
+
+class RegisterSerializer(serializers.Serializer):
+    """Сериализатор для регистрации."""
+
+    email = serializers.EmailField()
+    username = serializers.CharField(max_length=150)
+    password = serializers.CharField(min_length=8, write_only=True)
+    password_confirm = serializers.CharField(min_length=8, write_only=True)
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError('Пользователь с таким email уже существует')
+        return value
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError('Это имя пользователя уже занято')
+        return value
+
+    def validate(self, data):
+        if data['password'] != data['password_confirm']:
+            raise serializers.ValidationError({'password_confirm': 'Пароли не совпадают'})
+        return data
+
+
+class LoginSerializer(serializers.Serializer):
+    """Сериализатор для входа."""
+
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+
+class UserProfileUpdateSerializer(serializers.Serializer):
+    """Сериализатор для обновления профиля."""
+
+    username = serializers.CharField(max_length=150, required=False)
+    avatar_url = serializers.URLField(required=False, allow_blank=True)
+    bio = serializers.CharField(required=False, allow_blank=True)
+    default_sql_dialect = serializers.ChoiceField(
+        choices=['PostgreSQL', 'MySQL', 'SQLite', 'SQL Server', 'Oracle'],
+        required=False
+    )
+
+
+# --- Chat serializers ---
 
 class MessageSerializer(serializers.ModelSerializer):
     """Сериализатор для сообщений."""
@@ -44,6 +94,14 @@ class ChatCreateSerializer(serializers.ModelSerializer):
         fields = ['title']
 
 
+class ChatUpdateSerializer(serializers.ModelSerializer):
+    """Сериализатор для обновления чата."""
+
+    class Meta:
+        model = Chat
+        fields = ['title']
+
+
 class MessageCreateSerializer(serializers.Serializer):
     """Сериализатор для создания сообщения."""
 
@@ -56,9 +114,20 @@ class MessageCreateSerializer(serializers.Serializer):
     )
 
 
-class ChatUpdateSerializer(serializers.ModelSerializer):
-    """Сериализатор для обновления чата."""
+# --- SavedSchema serializers ---
+
+class SavedSchemaSerializer(serializers.ModelSerializer):
+    """Сериализатор для сохранённых схем."""
 
     class Meta:
-        model = Chat
-        fields = ['title']
+        model = SavedSchema
+        fields = ['id', 'name', 'er_data', 'sql', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class SavedSchemaCreateSerializer(serializers.ModelSerializer):
+    """Сериализатор для создания сохранённой схемы."""
+
+    class Meta:
+        model = SavedSchema
+        fields = ['name', 'er_data', 'sql']

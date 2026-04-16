@@ -16,7 +16,8 @@ import { toPng } from 'html-to-image';
 
 import TableNode from './TableNode';
 import type { ERData } from '@/types';
-import { User, LogOut, PanelLeft, Key, Link2, FileDown } from 'lucide-react';
+import { schemasApi } from '@/lib/api';
+import { User, LogOut, PanelLeft, Key, Link2, FileDown, BookmarkPlus, Check, X } from 'lucide-react';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const nodeTypes: Record<string, React.ComponentType<any>> = {
@@ -25,13 +26,14 @@ const nodeTypes: Record<string, React.ComponentType<any>> = {
 
 interface ERCanvasProps {
   erData: ERData | null;
+  currentSql?: string | null;
   user?: { username: string } | null;
   onLogout?: () => void;
   isSidebarVisible?: boolean;
   onOpenSidebar?: () => void;
 }
 
-function ERCanvasInner({ erData, user, onLogout, isSidebarVisible, onOpenSidebar }: ERCanvasProps) {
+function ERCanvasInner({ erData, currentSql, user, onLogout, isSidebarVisible, onOpenSidebar }: ERCanvasProps) {
   const reactFlowInstance = useReactFlow();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
@@ -39,6 +41,38 @@ function ERCanvasInner({ erData, user, onLogout, isSidebarVisible, onOpenSidebar
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Save to library state
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [saveName, setSaveName] = useState('');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+  const handleSaveToLibrary = async () => {
+    if (!erData || !saveName.trim()) return;
+    setSaveStatus('loading');
+    try {
+      await schemasApi.create({
+        name: saveName.trim(),
+        er_data: erData,
+        sql: currentSql ?? '',
+      });
+      setSaveStatus('success');
+      setTimeout(() => {
+        setShowSaveDialog(false);
+        setSaveName('');
+        setSaveStatus('idle');
+      }, 1200);
+    } catch {
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    }
+  };
+
+  const openSaveDialog = () => {
+    setSaveName('');
+    setSaveStatus('idle');
+    setShowSaveDialog(true);
+  };
 
   const handleSaveToPDF = useCallback(async () => {
     if (!reactFlowInstance) return;
@@ -284,16 +318,74 @@ function ERCanvasInner({ erData, user, onLogout, isSidebarVisible, onOpenSidebar
         </button>
       )}
 
+      {/* Save to library dialog */}
+      {showSaveDialog && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-5 w-80 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-medium text-sm">Сохранить в библиотеку</h3>
+              <button
+                onClick={() => setShowSaveDialog(false)}
+                className="text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <input
+              autoFocus
+              type="text"
+              value={saveName}
+              onChange={(e) => setSaveName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSaveToLibrary()}
+              placeholder="Название схемы..."
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors mb-3"
+            />
+            {saveStatus === 'error' && (
+              <p className="text-red-400 text-xs mb-3">Ошибка сохранения. Попробуй ещё раз.</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowSaveDialog(false)}
+                className="flex-1 py-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white text-sm transition-colors"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleSaveToLibrary}
+                disabled={!saveName.trim() || saveStatus === 'loading'}
+                className="flex-1 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 disabled:opacity-40 disabled:cursor-not-allowed text-sm transition-colors flex items-center justify-center gap-1.5"
+              >
+                {saveStatus === 'success' ? (
+                  <><Check size={14} /> Сохранено</>
+                ) : saveStatus === 'loading' ? (
+                  'Сохранение...'
+                ) : (
+                  'Сохранить'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* User profile button */}
       {user && (
         <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
           <button
+            onClick={openSaveDialog}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm"
+            title="Сохранить в библиотеку"
+          >
+            <BookmarkPlus size={16} />
+            <span className="hidden sm:inline">В библиотеку</span>
+          </button>
+          <button
             onClick={handleSaveToPDF}
             className="flex items-center gap-2 px-3 py-2 rounded-lg bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 transition-colors text-sm"
-            title="Сохранить в PDF"
+            title="Скачать PNG"
           >
             <FileDown size={16} />
-            <span className="hidden sm:inline">Сохранить</span>
+            <span className="hidden sm:inline">Скачать PNG</span>
           </button>
           <div className="relative">
             <button

@@ -3,8 +3,19 @@ export interface User {
   id: number;
   username: string;
   email: string;
-  first_name: string;
-  last_name: string;
+  avatar_url?: string;
+}
+
+export interface RegisterData {
+  email: string;
+  username: string;
+  password: string;
+  password_confirm: string;
+}
+
+export interface LoginData {
+  email: string;
+  password: string;
 }
 
 // Column types for ER diagram
@@ -95,6 +106,16 @@ export interface ChatDetailResponse {
 export interface SendMessageResponse {
   user_message: Message;
   assistant_message: Message;
+}
+
+// Saved Schema types
+export interface SavedSchema {
+  id: string;
+  name: string;
+  er_data: ERData;
+  sql: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // Store types
