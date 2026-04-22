@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'drf_spectacular',
+    'django_filters',
     # Local apps
     'er_generator.apps.ErGeneratorConfig',
 ]
@@ -101,7 +102,13 @@ CORS_ALLOWED_ORIGINS = os.getenv(
     'http://localhost:3000'
 ).split(',')
 
-CORS_ALLOW_ALL_ORIGINS = DEBUG
+# Credentials нужны для передачи httpOnly cookie access_token между фронтом и бэком.
+# CORS_ALLOW_ALL_ORIGINS несовместим с credentials — используем строгий список.
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False
 
 # DRF settings
 REST_FRAMEWORK = {
@@ -112,7 +119,31 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.JSONParser',
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+    ],
 }
+
+# Cache (LocMem для dev, Redis через env в проде)
+CACHES = {
+    'default': {
+        'BACKEND': os.getenv('CACHE_BACKEND', 'django.core.cache.backends.locmem.LocMemCache'),
+        'LOCATION': os.getenv('CACHE_LOCATION', 'erdatabase-default'),
+    }
+}
+CACHE_TTL_CHATS = int(os.getenv('CACHE_TTL_CHATS', '60'))
+CACHE_TTL_SCHEMAS = int(os.getenv('CACHE_TTL_SCHEMAS', '300'))
+
+# Email (в dev — console; в проде — SMTP через env)
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@erdatabase.local')
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 
 # Swagger / OpenAPI settings
 SPECTACULAR_SETTINGS = {

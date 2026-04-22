@@ -9,6 +9,9 @@ class User(AbstractUser):
 
     email = models.EmailField(unique=True)
     avatar_url = models.URLField(blank=True)
+    is_email_verified = models.BooleanField(default=False)
+    email_verification_token = models.UUIDField(null=True, blank=True)
+    email_verification_sent_at = models.DateTimeField(null=True, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
@@ -93,6 +96,27 @@ class Message(models.Model):
         return f"{self.role}: {self.content[:50]}..."
 
 
+class Tag(models.Model):
+    """Пользовательский тег для группировки сохранённых схем."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='tags'
+    )
+    name = models.CharField(max_length=50)
+    color = models.CharField(max_length=7, default='#8b5cf6')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+        unique_together = [('user', 'name')]
+
+    def __str__(self):
+        return f"{self.name} ({self.user.email})"
+
+
 class SavedSchema(models.Model):
     """Сохранённая ER-схема пользователя."""
 
@@ -105,11 +129,15 @@ class SavedSchema(models.Model):
     name = models.CharField(max_length=255)
     er_data = models.JSONField()
     sql = models.TextField(blank=True)
+    tags = models.ManyToManyField(Tag, blank=True, related_name='schemas')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
+        permissions = [
+            ('can_export_schema', 'Can export SQL schema to file'),
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.user.email})"

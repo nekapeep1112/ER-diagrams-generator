@@ -7,8 +7,4 @@ class ErGeneratorConfig(AppConfig):
     verbose_name = 'ER Generator'
 
     def ready(self):
-        # Импорт расширений для drf-spectacular
-        try:
-            import er_generator.extensions  # noqa
-        except ImportError:
-            pass
+        from . import extensions  # noqa: F401

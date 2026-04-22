@@ -11,5 +11,5 @@ class JWTAuthenticationScheme(OpenApiAuthenticationExtension):
             'type': 'http',
             'scheme': 'bearer',
             'bearerFormat': 'JWT',
-            'description': 'JWT авторизация. Получите токен через /api/auth/dev-login/ или /api/auth/github/',
+            'description': 'JWT авторизация. Получите токен через /api/auth/login/ или /api/auth/register/',
         }

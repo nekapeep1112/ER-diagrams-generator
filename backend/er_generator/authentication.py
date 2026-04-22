@@ -9,14 +9,15 @@ class JWTAuthentication(authentication.BaseAuthentication):
 
     def authenticate(self, request):
         auth_header = request.headers.get('Authorization')
+        token = None
 
-        if not auth_header:
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+        else:
+            token = request.COOKIES.get('access_token')
+
+        if not token:
             return None
-
-        if not auth_header.startswith('Bearer '):
-            return None
-
-        token = auth_header.split(' ')[1]
 
         try:
             payload = jwt.decode(

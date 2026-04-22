@@ -1,7 +1,11 @@
 import datetime
+import uuid
 import jwt
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+from django.core.mail import send_mail
+from django.utils import timezone
 from rest_framework import status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -25,6 +29,52 @@ def generate_jwt_token(user):
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
+def set_auth_cookie(response, token):
+    """Ставит JWT в httpOnly cookie. secure=True вне DEBUG."""
+    response.set_cookie(
+        'access_token',
+        token,
+        max_age=settings.JWT_EXPIRATION_HOURS * 3600,
+        httponly=True,
+        samesite='Lax',
+        secure=not settings.DEBUG,
+        path='/',
+    )
+    return response
+
+
+def user_payload(user):
+    """Унифицированный ответ о пользователе (используется в login/register/me)."""
+    return {
+        'id': user.id,
+        'email': user.email,
+        'username': user.username,
+        'avatar_url': getattr(user, 'avatar_url', ''),
+        'groups': list(user.groups.values_list('name', flat=True)),
+        'is_email_verified': user.is_email_verified,
+    }
+
+
+def send_verification_email(user):
+    """Генерирует токен и шлёт письмо со ссылкой на подтверждение."""
+    user.email_verification_token = uuid.uuid4()
+    user.email_verification_sent_at = timezone.now()
+    user.save(update_fields=['email_verification_token', 'email_verification_sent_at'])
+
+    link = f"{settings.FRONTEND_URL}/verify-email?token={user.email_verification_token}"
+    send_mail(
+        subject='Подтверждение регистрации в ER Database Generator',
+        message=(
+            f'Здравствуйте, {user.username}!\n\n'
+            f'Для подтверждения email перейдите по ссылке:\n{link}\n\n'
+            f'Ссылка действительна 24 часа.'
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=True,
+    )
+
+
 class RegisterView(APIView):
     """Регистрация нового пользователя."""
     authentication_classes = []
@@ -32,7 +82,7 @@ class RegisterView(APIView):
 
     @extend_schema(
         summary="Регистрация",
-        description="Создаёт нового пользователя по email и паролю",
+        description="Создаёт нового пользователя по email и паролю, отправляет письмо подтверждения",
         request=RegisterSerializer,
         responses={201: dict},
     )
@@ -47,15 +97,23 @@ class RegisterView(APIView):
         )
         UserProfile.objects.create(user=user)
 
+        # Добавляем в дефолтную группу free_user
+        try:
+            free_group = Group.objects.get(name='free_user')
+            user.groups.add(free_group)
+        except Group.DoesNotExist:
+            pass
+
+        send_verification_email(user)
+
         token = generate_jwt_token(user)
-        return Response({
+        response = Response({
             'token': token,
-            'user': {
-                'id': user.id,
-                'email': user.email,
-                'username': user.username,
-            }
+            'user': user_payload(user),
+            'need_verification': True,
+            'message': f'Письмо с подтверждением отправлено на {user.email}',
         }, status=status.HTTP_201_CREATED)
+        return set_auth_cookie(response, token)
 
 
 class LoginView(APIView):
@@ -87,15 +145,22 @@ class LoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
+        if not user.is_email_verified:
+            return Response(
+                {
+                    'error': 'Email не подтверждён. Проверьте почту или запросите новую ссылку.',
+                    'need_verification': True,
+                    'email': user.email,
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         token = generate_jwt_token(user)
-        return Response({
+        response = Response({
             'token': token,
-            'user': {
-                'id': user.id,
-                'email': user.email,
-                'username': user.username,
-            }
+            'user': user_payload(user),
         })
+        return set_auth_cookie(response, token)
 
 
 class UserProfileView(APIView):
@@ -109,14 +174,12 @@ class UserProfileView(APIView):
     )
     def get(self, request):
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
-        return Response({
-            'id': request.user.id,
-            'email': request.user.email,
-            'username': request.user.username,
-            'avatar_url': request.user.avatar_url,
+        data = user_payload(request.user)
+        data.update({
             'bio': profile.bio,
             'default_sql_dialect': profile.default_sql_dialect,
         })
+        return Response(data)
 
     @extend_schema(
         summary="Обновить профиль",
@@ -142,14 +205,12 @@ class UserProfileView(APIView):
             profile.default_sql_dialect = data['default_sql_dialect']
         profile.save()
 
-        return Response({
-            'id': request.user.id,
-            'email': request.user.email,
-            'username': request.user.username,
-            'avatar_url': request.user.avatar_url,
+        result = user_payload(request.user)
+        result.update({
             'bio': profile.bio,
             'default_sql_dialect': profile.default_sql_dialect,
         })
+        return Response(result)
 
 
 class VerifyTokenView(APIView):
@@ -181,11 +242,7 @@ class VerifyTokenView(APIView):
             user = User.objects.get(id=payload['user_id'])
             return Response({
                 'valid': True,
-                'user': {
-                    'id': user.id,
-                    'email': user.email,
-                    'username': user.username,
-                }
+                'user': user_payload(user),
             })
         except jwt.ExpiredSignatureError:
             return Response({'valid': False, 'error': 'Token expired'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -193,3 +250,94 @@ class VerifyTokenView(APIView):
             return Response({'valid': False, 'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
         except User.DoesNotExist:
             return Response({'valid': False, 'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class VerifyEmailView(APIView):
+    """Подтверждение email по токену из письма."""
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        summary="Подтвердить email",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {'token': {'type': 'string', 'format': 'uuid'}},
+                'required': ['token'],
+            }
+        },
+        responses={200: dict},
+    )
+    def post(self, request):
+        token = request.data.get('token')
+        if not token:
+            return Response({'error': 'Token is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email_verification_token=token)
+        except (User.DoesNotExist, ValueError):
+            return Response({'error': 'Неверный или устаревший токен'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if user.email_verification_sent_at:
+            age = timezone.now() - user.email_verification_sent_at
+            if age > datetime.timedelta(hours=24):
+                return Response({'error': 'Срок действия токена истёк. Запросите новое письмо.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+        user.is_email_verified = True
+        user.email_verification_token = None
+        user.save(update_fields=['is_email_verified', 'email_verification_token'])
+
+        jwt_token = generate_jwt_token(user)
+        response = Response({
+            'message': 'Email успешно подтверждён',
+            'token': jwt_token,
+            'user': user_payload(user),
+        })
+        return set_auth_cookie(response, jwt_token)
+
+
+class ResendVerificationView(APIView):
+    """Повторная отправка письма с подтверждением."""
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        summary="Отправить письмо подтверждения заново",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {'email': {'type': 'string', 'format': 'email'}},
+                'required': ['email'],
+            }
+        },
+        responses={200: dict},
+    )
+    def post(self, request):
+        email = request.data.get('email')
+        if not email:
+            return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # Не раскрываем факт существования пользователя
+            return Response({'message': 'Если аккаунт существует, письмо отправлено.'})
+
+        if user.is_email_verified:
+            return Response({'message': 'Email уже подтверждён.'})
+
+        send_verification_email(user)
+        return Response({'message': 'Письмо отправлено повторно.'})
+
+
+class LogoutView(APIView):
+    """Выход: очищает httpOnly cookie с токеном."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(summary="Выход", responses={200: dict})
+    def post(self, request):
+        response = Response({'message': 'Logged out'})
+        response.delete_cookie('access_token', path='/')
+        return response

@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
-from .models import Chat, Message, SavedSchema
+from .models import Chat, Message, SavedSchema, Tag
 
 User = get_user_model()
 
@@ -114,20 +114,35 @@ class MessageCreateSerializer(serializers.Serializer):
     )
 
 
+# --- Tag serializers ---
+
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ['id', 'name', 'color', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+
 # --- SavedSchema serializers ---
 
 class SavedSchemaSerializer(serializers.ModelSerializer):
     """Сериализатор для сохранённых схем."""
 
+    tags = TagSerializer(many=True, read_only=True)
+
     class Meta:
         model = SavedSchema
-        fields = ['id', 'name', 'er_data', 'sql', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'er_data', 'sql', 'tags', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class SavedSchemaCreateSerializer(serializers.ModelSerializer):
     """Сериализатор для создания сохранённой схемы."""
 
+    tag_ids = serializers.ListField(
+        child=serializers.UUIDField(), required=False, write_only=True
+    )
+
     class Meta:
         model = SavedSchema
-        fields = ['name', 'er_data', 'sql']
+        fields = ['name', 'er_data', 'sql', 'tag_ids']
