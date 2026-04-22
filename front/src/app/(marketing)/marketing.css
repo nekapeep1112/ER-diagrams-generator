@@ -1,0 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap');
+
+.marketing {
+  --bg-soft: #0a0a12;
+  --surface-2: #171722;
+  --border-soft: #15151f;
+  --fg-dim: #9a9aae;
+  --fg-mute: #646478;
+  --ok: #22c55e;
+  --warn: #f5c518;
+  --danger: #ef4444;
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-serif: 'Instrument Serif', serif;
+
+  font-family: var(--font-sans);
+  font-feature-settings: 'ss01', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  color: var(--foreground);
+  background: var(--background);
+}
+
+.marketing ::selection {
+  background: color-mix(in oklch, var(--accent-cyan) 40%, transparent);
+  color: white;
+}
+
+.marketing .mono { font-family: var(--font-mono); }
+.marketing .serif {
+  font-family: var(--font-serif);
+  font-style: italic;
+  letter-spacing: -0.01em;
+}
+
+.marketing .wrap {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+@media (max-width: 720px) {
+  .marketing .wrap { padding: 0 20px; }
+}
+
+.marketing .bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.marketing .bg-dots {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+@keyframes mkt-pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(0.9); }
+}
+@keyframes mkt-dash {
+  to { stroke-dashoffset: -20; }
+}
+@keyframes mkt-fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes mkt-caret {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}

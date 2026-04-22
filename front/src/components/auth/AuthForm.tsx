@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Mail, CheckCircle2 } from 'lucide-react';
 import { authApi } from '@/lib/api';
 import type { AuthResponse } from '@/types';
 
@@ -14,6 +15,9 @@ export default function AuthForm({ onSuccess }: AuthFormProps) {
   const [tab, setTab] = useState<Tab>('login');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needVerificationEmail, setNeedVerificationEmail] = useState<string | null>(null);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [registerData, setRegisterData] = useState({
@@ -26,17 +30,23 @@ export default function AuthForm({ onSuccess }: AuthFormProps) {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setNeedVerificationEmail(null);
+    setResendStatus(null);
     setIsLoading(true);
     try {
       const response = await authApi.login(loginData);
       onSuccess(response);
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { error?: string; detail?: string } } };
-      setError(
-        axiosErr.response?.data?.error ||
-        axiosErr.response?.data?.detail ||
-        'Ошибка входа. Проверьте email и пароль.'
-      );
+      const axiosErr = err as {
+        response?: { status?: number; data?: { error?: string; detail?: string; need_verification?: boolean; email?: string } };
+      };
+      const data = axiosErr.response?.data;
+      if (data?.need_verification) {
+        setNeedVerificationEmail(data.email || loginData.email);
+        setError(data.error || 'Email не подтверждён.');
+      } else {
+        setError(data?.error || data?.detail || 'Ошибка входа. Проверьте email и пароль.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -47,8 +57,9 @@ export default function AuthForm({ onSuccess }: AuthFormProps) {
     setError(null);
     setIsLoading(true);
     try {
-      const response = await authApi.register(registerData);
-      onSuccess(response);
+      await authApi.register(registerData);
+      // После регистрации НЕ логинимся автоматически — показываем экран «подтвердите email».
+      setRegisteredEmail(registerData.email);
     } catch (err: unknown) {
       const axiosErr = err as {
         response?: { data?: Record<string, string | string[]> };
@@ -65,45 +76,97 @@ export default function AuthForm({ onSuccess }: AuthFormProps) {
     }
   };
 
+  const handleResend = async (email: string) => {
+    setResendStatus(null);
+    try {
+      const r = await authApi.resendVerification(email);
+      setResendStatus(r.message || 'Письмо отправлено');
+    } catch {
+      setResendStatus('Не удалось отправить письмо');
+    }
+  };
+
+  if (registeredEmail) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f] px-4">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-semibold text-white">ER Database Generator</h1>
+          </div>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 text-center">
+            <CheckCircle2 className="mx-auto text-green-400 mb-3" size={40} />
+            <h2 className="text-white font-medium">Проверьте почту</h2>
+            <p className="text-zinc-400 text-sm mt-2">
+              Мы отправили письмо с подтверждением на{' '}
+              <span className="text-white">{registeredEmail}</span>.
+            </p>
+            <p className="text-zinc-500 text-xs mt-4">
+              Не пришло? Проверьте «Спам» или
+            </p>
+            <button
+              onClick={() => handleResend(registeredEmail)}
+              className="mt-2 text-sm text-cyan-400 hover:text-cyan-300"
+            >
+              Отправить ещё раз
+            </button>
+            {resendStatus && (
+              <p className="text-xs text-zinc-400 mt-2">{resendStatus}</p>
+            )}
+            <button
+              onClick={() => { setRegisteredEmail(null); setTab('login'); }}
+              className="mt-6 block mx-auto text-xs text-zinc-500 hover:text-zinc-300"
+            >
+              Назад ко входу
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f] px-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-semibold text-white">ER Database Generator</h1>
           <p className="text-zinc-500 text-sm mt-1">Проектируй базы данных с AI</p>
         </div>
 
-        {/* Card */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-          {/* Tabs */}
           <div className="flex mb-6 bg-zinc-800 rounded-lg p-1">
             <button
-              onClick={() => { setTab('login'); setError(null); }}
+              onClick={() => { setTab('login'); setError(null); setNeedVerificationEmail(null); }}
               className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                tab === 'login'
-                  ? 'bg-zinc-700 text-white'
-                  : 'text-zinc-400 hover:text-white'
+                tab === 'login' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
               }`}
             >
               Войти
             </button>
             <button
-              onClick={() => { setTab('register'); setError(null); }}
+              onClick={() => { setTab('register'); setError(null); setNeedVerificationEmail(null); }}
               className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                tab === 'register'
-                  ? 'bg-zinc-700 text-white'
-                  : 'text-zinc-400 hover:text-white'
+                tab === 'register' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
               }`}
             >
               Регистрация
             </button>
           </div>
 
-          {/* Error */}
           {error && (
             <div className="mb-4 px-3 py-2.5 bg-red-900/30 border border-red-800/50 rounded-lg text-red-400 text-sm">
               {error}
+              {needVerificationEmail && (
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleResend(needVerificationEmail)}
+                    className="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 text-xs underline"
+                  >
+                    <Mail size={12} /> Отправить ссылку заново
+                  </button>
+                  {resendStatus && <span className="text-zinc-400 text-xs">{resendStatus}</span>}
+                </div>
+              )}
             </div>
           )}
 

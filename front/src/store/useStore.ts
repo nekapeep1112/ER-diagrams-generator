@@ -6,6 +6,7 @@ import type {
   ChatDetailResponse,
   Message,
 } from '@/types';
+import { authApi } from '@/lib/api';
 
 export const useStore = create<AppState>((set) => ({
   user: null,
@@ -76,7 +77,8 @@ export const useStore = create<AppState>((set) => ({
 
   setError: (error: string | null) => set({ error }),
 
-  logout: () => {
+  logout: async () => {
+    await authApi.logout();
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     set({

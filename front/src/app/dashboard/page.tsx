@@ -32,20 +32,32 @@ export default function Home() {
   const [erData, setErData] = useState<ERData | null>(null);
   const [currentSql, setCurrentSql] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  const [chatSearch, setChatSearch] = useState('');
 
-  // Initial auth check — restore session from localStorage
+  const readSidebarCookie = (): boolean => {
+    if (typeof document === 'undefined') return true;
+    const match = document.cookie.match(/(?:^|;\s*)sidebar_visible=(1|0)/);
+    return match ? match[1] === '1' : true;
+  };
+  const [isSidebarVisible, setSidebarVisibleState] = useState(true);
+  const setIsSidebarVisible = (v: boolean) => {
+    setSidebarVisibleState(v);
+    if (typeof document !== 'undefined') {
+      document.cookie = `sidebar_visible=${v ? 1 : 0}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`;
+    }
+  };
+
+  // Initial auth check — пробуем cookie (httpOnly) и localStorage (fallback)
   useEffect(() => {
+    setSidebarVisibleState(readSidebarCookie());
+
     const initAuth = async () => {
       const savedToken = localStorage.getItem('token');
-      if (!savedToken) {
-        setIsAuthLoading(false);
-        return;
-      }
+      if (savedToken) setToken(savedToken);
       try {
-        setToken(savedToken);
         const me = await authApi.getMe();
         setUser(me);
+        if (!savedToken) setToken('cookie');
       } catch {
         localStorage.removeItem('token');
         setToken(null);
@@ -68,16 +80,18 @@ export default function Home() {
     setCurrentChat(null);
   };
 
-  // Load chats when authenticated
+  // Load chats when authenticated (+ debounce для поиска)
   useEffect(() => {
-    if (token && !isAuthLoading) {
-      loadChats();
-    }
-  }, [token, isAuthLoading]);
+    if (!token || isAuthLoading) return;
+    const t = setTimeout(() => {
+      loadChats(chatSearch);
+    }, chatSearch ? 300 : 0);
+    return () => clearTimeout(t);
+  }, [token, isAuthLoading, chatSearch]);
 
-  const loadChats = async () => {
+  const loadChats = async (search?: string) => {
     try {
-      const chatsData = await chatsApi.getList();
+      const chatsData = await chatsApi.getList(search);
       setChats(chatsData);
     } catch (error) {
       console.error('Failed to load chats:', error);
@@ -255,6 +269,9 @@ export default function Home() {
           chats={chats}
           currentChat={currentChat}
           isLoading={isLoading}
+          chatSearch={chatSearch}
+          user={user}
+          onChatSearchChange={setChatSearch}
           onSelectChat={handleSelectChat}
           onCreateChat={handleCreateChat}
           onDeleteChat={handleDeleteChat}

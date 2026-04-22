@@ -4,6 +4,8 @@ export interface User {
   username: string;
   email: string;
   avatar_url?: string;
+  groups?: string[];
+  is_email_verified?: boolean;
 }
 
 export interface RegisterData {
@@ -85,6 +87,8 @@ export interface Chat {
 export interface AuthResponse {
   token: string;
   user: User;
+  need_verification?: boolean;
+  message?: string;
 }
 
 export interface ChatListResponse {
@@ -108,12 +112,21 @@ export interface SendMessageResponse {
   assistant_message: Message;
 }
 
+// Tag types
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
+  created_at: string;
+}
+
 // Saved Schema types
 export interface SavedSchema {
   id: string;
   name: string;
   er_data: ERData;
   sql: string;
+  tags: Tag[];
   created_at: string;
   updated_at: string;
 }
@@ -139,5 +152,5 @@ export interface AppState {
   incrementMessageCount: (chatId: string, count?: number) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 }

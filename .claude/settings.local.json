@@ -3,7 +3,21 @@
     "allow": [
       "Bash(.venv/Scripts/pip install:*)",
       "Bash(\"/c/Users/Полина/Desktop/proj/ERDatabase/.venv/Scripts/python.exe\" manage.py migrate)",
-      "Bash(/c/Users/Полина/Desktop/proj/ERDatabase/.venv/Scripts/python.exe manage.py shell -c ' *)"
+      "Bash(/c/Users/Полина/Desktop/proj/ERDatabase/.venv/Scripts/python.exe manage.py shell -c ' *)",
+      "Bash(mkdir -p \"c:/Users/Полина/Desktop/proj/ERDatabase/front/src/app/\\(marketing\\)\")",
+      "Bash(mkdir -p \"c:/Users/Полина/Desktop/proj/ERDatabase/front/src/components/marketing\")",
+      "Bash(grep -E \"\\\\.py$\")",
+      "Bash(backend/venv/Scripts/python.exe -m pip install \"django-filter>=23.5\")",
+      "Bash(../backend/venv/Scripts/python.exe manage.py makemigrations er_generator)",
+      "Bash(../backend/venv/Scripts/python.exe manage.py migrate)",
+      "Bash(../backend/venv/Scripts/python.exe manage.py shell -c \"from django.contrib.auth.models import Group; print\\(list\\(Group.objects.values_list\\('name', flat=True\\)\\)\\)\")",
+      "Bash(../backend/venv/Scripts/python.exe manage.py check)",
+      "Bash(git -C \"c:/Users/Полина/Desktop/proj/ERDatabase\" ls-files --error-unmatch .env)",
+      "Bash(git -C \"c:/Users/Полина/Desktop/proj/ERDatabase\" check-ignore -v .env front/.next front/node_modules front/tsconfig.tsbuildinfo .idea .claude .venv)",
+      "Bash(git -C \"c:/Users/Полина/Desktop/proj/ERDatabase\" ls-files .claude)",
+      "Bash(git -C \"c:/Users/Полина/Desktop/proj/ERDatabase\" ls-files front/src/lib/)",
+      "Bash(git -C \"c:/Users/Полина/Desktop/proj/ERDatabase\" check-ignore -v front/src/lib/api.ts)",
+      "Bash(git -C \"c:/Users/Полина/Desktop/proj/ERDatabase\" check-ignore -v front/src/lib/api.ts front/src/store/useStore.ts backend/venv/x .venv/x node_modules/x .env front/src/components/ui/Button.tsx)"
     ]
   }
 }

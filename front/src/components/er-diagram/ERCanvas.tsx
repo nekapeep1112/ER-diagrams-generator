@@ -17,7 +17,7 @@ import { toPng } from 'html-to-image';
 import TableNode from './TableNode';
 import type { ERData } from '@/types';
 import { schemasApi } from '@/lib/api';
-import { User, LogOut, PanelLeft, Key, Link2, FileDown, BookmarkPlus, Check, X } from 'lucide-react';
+import { User, LogOut, PanelLeft, Key, Link2, FileDown, BookmarkPlus, Check, X, Crown, Lock } from 'lucide-react';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const nodeTypes: Record<string, React.ComponentType<any>> = {
@@ -45,7 +45,8 @@ function ERCanvasInner({ erData, currentSql, user, onLogout, isSidebarVisible, o
   // Save to library state
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saveName, setSaveName] = useState('');
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'limit'>('idle');
+  const [limitInfo, setLimitInfo] = useState<{ limit: number; current: number } | null>(null);
 
   const handleSaveToLibrary = async () => {
     if (!erData || !saveName.trim()) return;
@@ -62,9 +63,20 @@ function ERCanvasInner({ erData, currentSql, user, onLogout, isSidebarVisible, o
         setSaveName('');
         setSaveStatus('idle');
       }, 1200);
-    } catch {
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (err: unknown) {
+      const e = err as {
+        response?: { status?: number; data?: { error?: string; limit?: number; current?: number } };
+      };
+      if (e.response?.status === 403 && e.response?.data?.limit !== undefined) {
+        setLimitInfo({
+          limit: e.response.data.limit,
+          current: e.response.data.current ?? e.response.data.limit,
+        });
+        setSaveStatus('limit');
+      } else {
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      }
     }
   };
 
@@ -323,47 +335,84 @@ function ERCanvasInner({ erData, currentSql, user, onLogout, isSidebarVisible, o
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-5 w-80 shadow-xl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-medium text-sm">Сохранить в библиотеку</h3>
+              <h3 className="text-white font-medium text-sm">
+                {saveStatus === 'limit' ? 'Лимит схем исчерпан' : 'Сохранить в библиотеку'}
+              </h3>
               <button
-                onClick={() => setShowSaveDialog(false)}
+                onClick={() => { setShowSaveDialog(false); setSaveStatus('idle'); setLimitInfo(null); }}
                 className="text-zinc-500 hover:text-zinc-300 transition-colors"
               >
                 <X size={16} />
               </button>
             </div>
-            <input
-              autoFocus
-              type="text"
-              value={saveName}
-              onChange={(e) => setSaveName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSaveToLibrary()}
-              placeholder="Название схемы..."
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors mb-3"
-            />
-            {saveStatus === 'error' && (
-              <p className="text-red-400 text-xs mb-3">Ошибка сохранения. Попробуй ещё раз.</p>
-            )}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowSaveDialog(false)}
-                className="flex-1 py-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white text-sm transition-colors"
-              >
-                Отмена
-              </button>
-              <button
-                onClick={handleSaveToLibrary}
-                disabled={!saveName.trim() || saveStatus === 'loading'}
-                className="flex-1 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 disabled:opacity-40 disabled:cursor-not-allowed text-sm transition-colors flex items-center justify-center gap-1.5"
-              >
-                {saveStatus === 'success' ? (
-                  <><Check size={14} /> Сохранено</>
-                ) : saveStatus === 'loading' ? (
-                  'Сохранение...'
-                ) : (
-                  'Сохранить'
+
+            {saveStatus === 'limit' && limitInfo ? (
+              <div className="text-center py-2">
+                <div className="mx-auto w-14 h-14 rounded-full bg-gradient-to-br from-amber-500/20 to-purple-500/20 border border-amber-500/30 flex items-center justify-center mb-3">
+                  <Crown size={26} className="text-amber-400" />
+                </div>
+                <p className="text-white text-sm font-medium mb-1">
+                  Сохранено {limitInfo.current} из {limitInfo.limit} схем
+                </p>
+                <p className="text-zinc-400 text-xs leading-relaxed mb-4">
+                  На free-тарифе можно сохранить до {limitInfo.limit} схем. Удалите лишние в библиотеке или перейдите на Pro, чтобы снять лимит и получить экспорт SQL.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setShowSaveDialog(false); setSaveStatus('idle'); setLimitInfo(null); }}
+                    className="flex-1 py-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white text-sm transition-colors"
+                  >
+                    Закрыть
+                  </button>
+                  <button
+                    disabled
+                    title="Скоро — оплата через Stripe"
+                    className="flex-1 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/30 to-purple-500/30 border border-amber-500/40 text-amber-200 text-sm transition-colors flex items-center justify-center gap-1.5 cursor-not-allowed"
+                  >
+                    <Crown size={14} /> Pro (скоро)
+                  </button>
+                </div>
+                <p className="text-[10px] text-zinc-600 mt-3 flex items-center justify-center gap-1">
+                  <Lock size={10} /> Сейчас Pro выдаётся админом через Django admin
+                </p>
+              </div>
+            ) : (
+              <>
+                <input
+                  autoFocus
+                  type="text"
+                  value={saveName}
+                  onChange={(e) => setSaveName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveToLibrary()}
+                  placeholder="Название схемы..."
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors mb-3"
+                />
+                {saveStatus === 'error' && (
+                  <p className="text-red-400 text-xs mb-3">Ошибка сохранения. Попробуй ещё раз.</p>
                 )}
-              </button>
-            </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowSaveDialog(false)}
+                    className="flex-1 py-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white text-sm transition-colors"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    onClick={handleSaveToLibrary}
+                    disabled={!saveName.trim() || saveStatus === 'loading'}
+                    className="flex-1 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 disabled:opacity-40 disabled:cursor-not-allowed text-sm transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    {saveStatus === 'success' ? (
+                      <><Check size={14} /> Сохранено</>
+                    ) : saveStatus === 'loading' ? (
+                      'Сохранение...'
+                    ) : (
+                      'Сохранить'
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

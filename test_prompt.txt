@@ -1,49 +1,71 @@
-Создай ER-диаграмму базы данных приложения ER Database Generator. Используй PostgreSQL.
+Создай ER-диаграмму базы данных для приложения ER Database Generator — AI-инструмент, где пользователь описывает предметную область в чате, а GPT-4o генерирует ER-схему и SQL. Используй PostgreSQL.
 
-Таблица users — пользователи системы:
+Таблица users — пользователи системы (кастомная модель на базе Django AbstractUser):
+- id (BIGSERIAL, PRIMARY KEY)
+- password (VARCHAR 128, NOT NULL)
+- last_login (TIMESTAMP, nullable)
+- is_superuser (BOOLEAN, default false)
+- username (VARCHAR 150, UNIQUE, NOT NULL)
+- first_name (VARCHAR 150, default '')
+- last_name (VARCHAR 150, default '')
+- email (VARCHAR 254, UNIQUE, NOT NULL) — используется как логин (USERNAME_FIELD)
+- is_staff (BOOLEAN, default false)
+- is_active (BOOLEAN, default true)
+- date_joined (TIMESTAMP, NOT NULL)
+- avatar_url (VARCHAR 200, default '')
+- is_email_verified (BOOLEAN, default false)
+- email_verification_token (UUID, nullable)
+- email_verification_sent_at (TIMESTAMP, nullable)
 
-id (BIGSERIAL, PRIMARY KEY)
-email (VARCHAR 254, UNIQUE, NOT NULL) — используется как логин
-username (VARCHAR 150, UNIQUE, NOT NULL)
-password (VARCHAR 128, NOT NULL)
-avatar_url (VARCHAR 200, nullable)
-is_active (BOOLEAN, default true)
-is_staff (BOOLEAN, default false)
-date_joined (TIMESTAMP, NOT NULL)
-Таблица user_profiles — расширенный профиль, связь 1:1 с users:
+Таблица user_profiles — расширенный профиль пользователя, связь 1:1 с users:
+- id (BIGSERIAL, PRIMARY KEY)
+- user_id (BIGINT, FK → users.id ON DELETE CASCADE, UNIQUE, NOT NULL)
+- bio (TEXT, default '')
+- default_sql_dialect (VARCHAR 20, default 'PostgreSQL') — ENUM: PostgreSQL, MySQL, SQLite, SQL Server, Oracle
 
-id (BIGSERIAL, PRIMARY KEY)
-user_id (BIGINT, FK → users.id, UNIQUE, NOT NULL)
-bio (TEXT, nullable)
-default_sql_dialect (VARCHAR 20, default 'PostgreSQL')
 Таблица chats — диалоги пользователя с AI:
+- id (UUID, PRIMARY KEY, default uuid_generate_v4)
+- user_id (BIGINT, FK → users.id ON DELETE CASCADE, nullable)
+- title (VARCHAR 255, NOT NULL, default 'Новый чат')
+- created_at (TIMESTAMP, NOT NULL)
+- updated_at (TIMESTAMP, NOT NULL)
 
-id (UUID, PRIMARY KEY)
-user_id (BIGINT, FK → users.id, nullable)
-title (VARCHAR 255, NOT NULL, default 'Новый чат')
-created_at (TIMESTAMP)
-updated_at (TIMESTAMP)
 Таблица messages — сообщения внутри чата:
+- id (UUID, PRIMARY KEY, default uuid_generate_v4)
+- chat_id (UUID, FK → chats.id ON DELETE CASCADE, NOT NULL)
+- role (VARCHAR 10, NOT NULL) — ENUM: 'user', 'assistant'
+- content (TEXT, NOT NULL)
+- er_data (JSONB, nullable) — сгенерированная ER-схема в формате {nodes, edges}
+- sql (TEXT, nullable) — сгенерированный SQL-код
+- created_at (TIMESTAMP, NOT NULL)
 
-id (UUID, PRIMARY KEY)
-chat_id (UUID, FK → chats.id, NOT NULL)
-role (VARCHAR 10, NOT NULL) — значения: 'user' или 'assistant'
-content (TEXT, NOT NULL)
-er_data (JSON, nullable) — сгенерированная ER-схема в формате nodes/edges
-sql (TEXT, nullable) — сгенерированный SQL-код
-created_at (TIMESTAMP)
+Таблица tags — пользовательские теги для группировки сохранённых схем:
+- id (UUID, PRIMARY KEY, default uuid_generate_v4)
+- user_id (BIGINT, FK → users.id ON DELETE CASCADE, NOT NULL)
+- name (VARCHAR 50, NOT NULL)
+- color (VARCHAR 7, default '#8b5cf6') — HEX-цвет
+- created_at (TIMESTAMP, NOT NULL)
+- UNIQUE CONSTRAINT (user_id, name)
+
 Таблица saved_schemas — схемы, сохранённые пользователем в библиотеку:
+- id (UUID, PRIMARY KEY, default uuid_generate_v4)
+- user_id (BIGINT, FK → users.id ON DELETE CASCADE, NOT NULL)
+- name (VARCHAR 255, NOT NULL)
+- er_data (JSONB, NOT NULL)
+- sql (TEXT, default '')
+- created_at (TIMESTAMP, NOT NULL)
+- updated_at (TIMESTAMP, NOT NULL)
 
-id (UUID, PRIMARY KEY)
-user_id (BIGINT, FK → users.id, NOT NULL)
-name (VARCHAR 255, NOT NULL)
-er_data (JSON, NOT NULL)
-sql (TEXT)
-created_at (TIMESTAMP)
-updated_at (TIMESTAMP)
+Таблица saved_schemas_tags — junction-таблица M:N между saved_schemas и tags:
+- id (BIGSERIAL, PRIMARY KEY)
+- savedschema_id (UUID, FK → saved_schemas.id ON DELETE CASCADE, NOT NULL)
+- tag_id (UUID, FK → tags.id ON DELETE CASCADE, NOT NULL)
+- UNIQUE CONSTRAINT (savedschema_id, tag_id)
+
 Связи:
-
-users → user_profiles: 1:1 (у каждого пользователя ровно один профиль)
-users → chats: 1:N (пользователь может иметь много чатов)
-users → saved_schemas: 1:N (пользователь может сохранить много схем)
-chats → messages: 1:N (в каждом чате много сообщений)
+- users → user_profiles: 1:1 (у каждого пользователя ровно один профиль)
+- users → chats: 1:N (пользователь может иметь много чатов)
+- users → tags: 1:N (пользователь создаёт свои теги)
+- users → saved_schemas: 1:N (пользователь может сохранить много схем)
+- chats → messages: 1:N (в чате много сообщений)
+- saved_schemas ↔ tags: M:N через saved_schemas_tags (у схемы может быть несколько тегов, один тег — у нескольких схем)

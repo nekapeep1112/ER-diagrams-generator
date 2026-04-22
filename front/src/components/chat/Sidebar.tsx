@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { GripVertical, X, ChevronLeft, Plus, MessageSquare, BookOpen } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { GripVertical, X, ChevronLeft, Plus, MessageSquare, BookOpen, Search } from 'lucide-react';
 import ChatList from './ChatList';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 import LibraryPanel from './LibraryPanel';
-import type { ChatListResponse, ChatDetailResponse, SqlDialect, ERData } from '@/types';
+import type { ChatListResponse, ChatDetailResponse, SqlDialect, ERData, User } from '@/types';
 
 type SidebarTab = 'chats' | 'library';
 
@@ -14,6 +14,9 @@ interface SidebarProps {
   chats: ChatListResponse[];
   currentChat: ChatDetailResponse | null;
   isLoading: boolean;
+  chatSearch: string;
+  user?: User | null;
+  onChatSearchChange: (s: string) => void;
   onSelectChat: (chatId: string) => void;
   onCreateChat: () => void;
   onDeleteChat: (chatId: string) => void;
@@ -26,6 +29,9 @@ export default function Sidebar({
   chats,
   currentChat,
   isLoading,
+  chatSearch,
+  user,
+  onChatSearchChange,
   onSelectChat,
   onCreateChat,
   onDeleteChat,
@@ -36,7 +42,6 @@ export default function Sidebar({
   const [width, setWidth] = useState(480);
   const [isResizing, setIsResizing] = useState(false);
   const [activeTab, setActiveTab] = useState<SidebarTab>('chats');
-  const sidebarRef = useRef<HTMLElement>(null);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -68,7 +73,6 @@ export default function Sidebar({
 
   return (
     <aside
-      ref={sidebarRef}
       className="h-full flex flex-col bg-[#0d0d14] border-r border-[#1e1e2e] relative overflow-hidden"
       style={{ width: `${width}px`, userSelect: 'none' }}
     >
@@ -105,17 +109,31 @@ export default function Sidebar({
 
       {/* Chat list */}
       {!currentChat && activeTab === 'chats' && (
-        <ChatList
-          chats={chats}
-          currentChatId={null}
-          onSelectChat={onSelectChat}
-          onDeleteChat={onDeleteChat}
-        />
+        <>
+          <div className="px-3 py-2 border-b border-[#1e1e2e]">
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+              <input
+                type="text"
+                value={chatSearch}
+                onChange={(e) => onChatSearchChange(e.target.value)}
+                placeholder="Поиск по чатам..."
+                className="w-full bg-[#12121a] border border-[#1e1e2e] rounded-lg pl-8 pr-3 py-1.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-cyan-500/40"
+              />
+            </div>
+          </div>
+          <ChatList
+            chats={chats}
+            currentChatId={null}
+            onSelectChat={onSelectChat}
+            onDeleteChat={onDeleteChat}
+          />
+        </>
       )}
 
       {/* Library */}
       {!currentChat && activeTab === 'library' && (
-        <LibraryPanel onLoadSchema={onLoadSchema} />
+        <LibraryPanel onLoadSchema={onLoadSchema} user={user ?? null} />
       )}
 
       {/* Current chat view */}
