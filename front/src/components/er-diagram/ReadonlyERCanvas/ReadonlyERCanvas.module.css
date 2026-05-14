@@ -1,0 +1,96 @@
+.wrap {
+  position: relative;
+  min-height: 640px;
+  height: 640px;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.04) 1.2px, transparent 0);
+  background-size: 22px 22px;
+  background-color: var(--bg);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.wrap :global(.react-flow__renderer),
+.wrap :global(.react-flow__pane) {
+  background: transparent;
+}
+
+.wrap :global(.react-flow__background) {
+  background: transparent;
+}
+
+.wrap :global(.react-flow__handle) {
+  opacity: 0 !important;
+}
+
+.readChip {
+  position: absolute;
+  bottom: 24px;
+  right: 168px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: rgba(18, 18, 26, 0.9);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 5;
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.zoomControls {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  background: rgba(18, 18, 26, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2px;
+  z-index: 5;
+}
+
+.zoomControls button {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+  border-radius: 6px;
+  transition: background-color 0.12s, color 0.12s;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.zoomControls button:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+@media (max-width: 760px) {
+  .readChip {
+    right: 16px;
+    bottom: 64px;
+  }
+  .zoomControls {
+    right: 16px;
+    bottom: 16px;
+  }
+}

@@ -1,0 +1,69 @@
+.tabBar {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  height: 48px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px 0 0;
+  position: sticky;
+  top: 0;
+  z-index: 4;
+}
+
+.tabs {
+  border-bottom: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 0 16px;
+}
+
+.dialectTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-2);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.dialectTrigger:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+
+.dialectItem {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text-2);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.dialectItem:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.dialectItemActive {
+  color: var(--cyan);
+}

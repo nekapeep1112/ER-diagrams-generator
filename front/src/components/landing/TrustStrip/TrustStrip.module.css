@@ -1,0 +1,32 @@
+.section {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 22px 0;
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  flex-wrap: wrap;
+}
+
+.avatars { display: flex; }
+
+.av {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--bg);
+  margin-left: -6px;
+}
+
+.avatars .av:first-child { margin-left: 0; }
+
+.av1 { background: linear-gradient(135deg, #3f3f55, #5a5a7a); }
+.av2 { background: linear-gradient(135deg, #2a3a5a, #3a5a7a); }
+.av3 { background: linear-gradient(135deg, #4a3a5a, #6a4a7a); }

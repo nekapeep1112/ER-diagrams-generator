@@ -364,9 +364,9 @@ class TagListView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
-    @extend_schema(summary="Список тегов", responses={200: TagSerializer(many=True)})
+    @extend_schema(summary="Список тегов (системные + личные)", responses={200: TagSerializer(many=True)})
     def get(self, request):
-        tags = Tag.objects.filter(user=request.user)
+        tags = Tag.objects.filter(Q(user__isnull=True) | Q(user=request.user))
         return Response(TagSerializer(tags, many=True).data)
 
     @extend_schema(summary="Создать тег", request=TagSerializer, responses={201: TagSerializer})

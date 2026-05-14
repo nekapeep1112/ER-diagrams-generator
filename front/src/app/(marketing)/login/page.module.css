@@ -1,0 +1,99 @@
+.shell {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 96px 32px 64px;
+}
+
+.header {
+  margin-bottom: 32px;
+}
+
+.title {
+  font-size: 32px;
+  letter-spacing: -0.4px;
+  font-weight: 500;
+  margin: 14px 0 12px;
+}
+
+.subtitle {
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.passwordLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.forgotLink {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--cyan);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.forgotLink:hover {
+  text-decoration: underline;
+}
+
+.submit {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.dividerLine {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.dividerText {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.bottomLink {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.cyanLink {
+  color: var(--cyan);
+}
+
+.cyanLink:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 760px) {
+  .shell {
+    padding: 64px 20px 48px;
+  }
+
+  .title {
+    font-size: 26px;
+  }
+}

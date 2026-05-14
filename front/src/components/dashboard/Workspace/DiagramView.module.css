@@ -1,0 +1,48 @@
+.canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  height: 100%;
+  padding: 48px 24px;
+  background: var(--bg);
+}
+
+.emptyIcon {
+  color: var(--muted);
+}
+
+.emptyTitle {
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.4px;
+  color: var(--text);
+  margin: 0;
+}
+
+.emptyHint {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-2);
+  text-align: center;
+  max-width: 360px;
+  margin: 0;
+}
+
+.emptyArrow {
+  color: var(--muted);
+  animation: bounce 1.6s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}

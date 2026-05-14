@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import auth_views
+from . import template_views as tv
 
 urlpatterns = [
     # Auth
@@ -24,6 +25,16 @@ urlpatterns = [
     path('schemas/', views.SavedSchemaListView.as_view(), name='schema-list'),
     path('schemas/<uuid:schema_id>/', views.SavedSchemaDetailView.as_view(), name='schema-detail'),
     path('schemas/<uuid:schema_id>/export/', views.SavedSchemaExportView.as_view(), name='schema-export'),
+    path('schemas/<uuid:schema_id>/publish/', tv.SavedSchemaPublishView.as_view(), name='schema-publish'),
+    path('schemas/<uuid:schema_id>/notes/', tv.SchemaNotesView.as_view(), name='schema-notes'),
+
+    # Notes
+    path('notes/<uuid:note_id>/', tv.NoteDetailView.as_view(), name='note-detail'),
+
+    # Templates
+    path('templates/', tv.TemplateListView.as_view(), name='template-list'),
+    path('templates/<uuid:template_id>/', tv.TemplateDetailView.as_view(), name='template-detail'),
+    path('templates/<uuid:template_id>/fork/', tv.TemplateForkView.as_view(), name='template-fork'),
 
     # Tags
     path('tags/', views.TagListView.as_view(), name='tag-list'),

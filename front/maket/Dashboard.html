@@ -1,0 +1,767 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ER Database — Дашборд</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap&subset=latin,cyrillic" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --elevated: #1a1a26;
+    --input: #0d0d14;
+    --border: #1e1e2e;
+    --border-hover: #2a2a3e;
+    --border-strong: #3a3a52;
+    --text: #fafafa;
+    --text-2: #a1a1aa;
+    --muted: #71717a;
+    --disabled: #52525b;
+    --cyan: #06b6d4;
+    --purple: #a855f7;
+    --yellow: #facc15;
+    --red: #f43f5e;
+    --green: #4ade80;
+    --glow: 0 0 24px rgba(6,182,212,0.2);
+    --sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); height: 100%; overflow: hidden; }
+  body { font-family: var(--sans); font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; padding: 0; }
+  input, textarea { font-family: inherit; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #1e1e2e; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #2a2a3e; }
+
+  .micro { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-weight: 400; }
+
+  .app { display: grid; grid-template-columns: 260px 1fr; height: 100vh; width: 100vw; }
+  .app.collapsed { grid-template-columns: 60px 1fr; }
+
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-width: 0; }
+  .sb-top { padding: 16px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid var(--border); }
+  .sb-brand-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; letter-spacing: -0.2px; min-width: 0; }
+  .brand-mark { width: 22px; height: 22px; flex: 0 0 22px; }
+  .brand-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .icon-btn { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; color: var(--muted); transition: background-color .15s, color .15s; position: relative; }
+  .icon-btn:hover { background: var(--elevated); color: var(--text); }
+  .icon-btn svg { width: 16px; height: 16px; }
+  .tooltip { position: absolute; bottom: -30px; left: 50%; transform: translateX(-50%); background: var(--elevated); border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; font-family: var(--mono); font-size: 10px; color: var(--text-2); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .12s; z-index: 100; }
+  .icon-btn:hover .tooltip { opacity: 1; }
+
+  .sb-search { position: relative; }
+  .sb-search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--muted); pointer-events: none; }
+  .sb-search input { width: 100%; height: 32px; background: var(--input); border: 1px solid var(--border); border-radius: 6px; padding: 0 10px 0 32px; color: var(--text); font-size: 13px; outline: none; transition: border-color .15s; }
+  .sb-search input::placeholder { color: var(--disabled); }
+  .sb-search input:focus { border-color: var(--cyan); }
+
+  .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 36px; border-radius: 8px; background: linear-gradient(135deg, var(--cyan) 0%, var(--purple) 100%); color: #0a0a0f; font-size: 13px; font-weight: 500; letter-spacing: -0.1px; transition: filter .15s, box-shadow .15s; }
+  .btn-primary:hover { filter: brightness(1.1); box-shadow: var(--glow); }
+  .btn-primary svg { width: 14px; height: 14px; }
+
+  .sb-mid { flex: 1; overflow-y: auto; padding-bottom: 8px; }
+  .sb-section-label { padding: 16px 16px 8px; }
+  .chat-list { display: flex; flex-direction: column; }
+  .chat-item { display: flex; flex-direction: column; justify-content: center; height: 56px; padding: 8px 16px; border-left: 2px solid transparent; cursor: pointer; position: relative; transition: background-color .12s; gap: 2px; min-width: 0; }
+  .chat-item:hover { background: rgba(255,255,255,0.025); }
+  .chat-item .ci-title { font-size: 14px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+  .chat-item .ci-meta { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; line-height: 1.3; }
+  .chat-item.active { background: rgba(6,182,212,0.06); border-left-color: var(--cyan); }
+  .chat-item .ci-menu { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; color: var(--muted); opacity: 0; transition: opacity .12s, background-color .12s; }
+  .chat-item:hover .ci-menu { opacity: 1; }
+  .chat-item .ci-menu:hover { background: var(--elevated); color: var(--text); }
+  .chat-item .ci-menu svg { width: 14px; height: 14px; }
+
+  .sb-bot { padding: 12px 16px; border-top: 1px solid var(--border); }
+  .user-row { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 4px; margin: -4px; border-radius: 6px; transition: background-color .12s; min-width: 0; }
+  .user-row:hover { background: var(--elevated); }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #3f3f55, #5a5a7a); flex: 0 0 28px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; color: var(--text); font-family: var(--mono); }
+  .user-row .email { flex: 1; font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .user-row .chev { color: var(--muted); }
+  .user-row .chev svg { width: 14px; height: 14px; display: block; }
+
+  .app.collapsed .sb-section-label,
+  .app.collapsed .sb-search,
+  .app.collapsed .btn-primary .lbl,
+  .app.collapsed .brand-name,
+  .app.collapsed .chat-item .ci-meta,
+  .app.collapsed .chat-item .ci-menu,
+  .app.collapsed .user-row .email,
+  .app.collapsed .user-row .chev { display: none; }
+  .app.collapsed .sb-top { padding: 12px 8px; gap: 8px; align-items: center; }
+  .app.collapsed .sb-brand-row { justify-content: center; }
+  .app.collapsed .btn-primary { width: 36px; height: 36px; padding: 0; }
+  .app.collapsed .chat-item { height: 36px; width: 36px; margin: 4px auto; padding: 0; border-radius: 6px; border-left: none; align-items: center; justify-content: center; background: var(--input); }
+  .app.collapsed .chat-item .ci-title { font-family: var(--mono); font-size: 11px; color: var(--text-2); }
+  .app.collapsed .chat-item.active { background: rgba(6,182,212,0.08); border: 1px solid rgba(6,182,212,0.3); }
+  .app.collapsed .sb-bot { padding: 12px 0; }
+  .app.collapsed .user-row { justify-content: center; }
+
+  .ws { display: grid; grid-template-rows: 48px 1fr auto; height: 100vh; min-width: 0; position: relative; }
+
+  .topbar { display: flex; align-items: stretch; justify-content: space-between; border-bottom: 1px solid var(--border); background: var(--bg); padding-right: 16px; }
+  .tabs { display: flex; align-items: stretch; }
+  .tab { display: inline-flex; align-items: center; gap: 8px; padding: 0 16px; font-family: var(--mono); font-size: 12px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .12s, border-color .12s; height: 48px; letter-spacing: 0.3px; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--cyan); }
+  .tab .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+  .tab.active .dot { background: var(--cyan); }
+  .tab .pill { font-family: var(--mono); font-size: 9px; padding: 1px 5px; background: var(--elevated); color: var(--text-2); border-radius: 999px; letter-spacing: 0; }
+
+  .tb-actions { display: flex; align-items: center; gap: 8px; }
+  .btn-sec { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; background: var(--surface); border: 1px solid var(--border-hover); border-radius: 6px; color: var(--text); font-size: 12px; font-weight: 500; transition: background-color .12s, border-color .12s; }
+  .btn-sec:hover { background: var(--elevated); border-color: var(--border-strong); }
+  .btn-sec svg { width: 13px; height: 13px; }
+  .btn-sec.disabled { color: var(--disabled); cursor: not-allowed; }
+  .btn-sec.disabled:hover { background: var(--surface); border-color: var(--border-hover); }
+
+  .btn-primary-sm { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 14px; border-radius: 6px; background: linear-gradient(135deg, var(--cyan) 0%, var(--purple) 100%); color: #0a0a0f; font-size: 12px; font-weight: 500; transition: filter .15s, box-shadow .15s; }
+  .btn-primary-sm:hover { filter: brightness(1.1); box-shadow: var(--glow); }
+  .btn-primary-sm svg { width: 13px; height: 13px; }
+
+  .btn-gh { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 6px; color: var(--text-2); font-size: 12px; transition: background-color .12s, color .12s; }
+  .btn-gh:hover { background: var(--surface); color: var(--text); }
+  .btn-gh svg { width: 13px; height: 13px; }
+  .btn-gh.mono { font-family: var(--mono); }
+
+  .canvas-wrap { position: relative; min-height: 0; overflow: hidden; }
+  .canvas-pane { position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity .15s; }
+  .canvas-pane.active { opacity: 1; pointer-events: auto; }
+
+  .er-pane { background: var(--bg); overflow: auto; }
+  .er-pane::-webkit-scrollbar { width: 6px; height: 6px; }
+  .er-pane::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+  .er-pane::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+  .er-inner { position: relative; width: 1200px; height: 460px; background: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0) 0 0/18px 18px, var(--bg); }
+  .er-edges { position: absolute; left: 0; top: 0; pointer-events: none; }
+  .table-node { position: absolute; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; font-family: var(--mono); font-size: 12px; width: 220px; cursor: pointer; transition: border-color .12s; }
+  .table-node:hover { border-color: var(--border-hover); }
+  .table-node.active { box-shadow: var(--glow); border-color: rgba(6,182,212,0.3); }
+  .table-node .head { padding: 8px 12px; background: linear-gradient(90deg, var(--cyan), var(--purple)); color: #0a0a0f; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 500; border-radius: 9px 9px 0 0; }
+  .table-node .row { display: flex; align-items: center; justify-content: space-between; padding: 7px 12px; border-top: 1px solid var(--border); color: var(--text-2); gap: 12px; background: var(--surface); }
+  .table-node .row:last-child { border-radius: 0 0 9px 9px; }
+  .table-node .row .left { display: flex; align-items: center; gap: 8px; color: var(--text); }
+  .table-node .row .type { color: var(--muted); font-size: 11px; }
+  .table-node .row .ic { width: 12px; height: 12px; flex: 0 0 12px; display: inline-block; }
+  .ic-pk { color: var(--yellow); }
+  .ic-fk { color: var(--cyan); }
+
+  .note-badge { position: absolute; top: -8px; right: -8px; background: var(--elevated); border: 1px solid var(--border-hover); border-radius: 999px; padding: 3px 7px; font-family: var(--mono); font-size: 10px; color: var(--cyan); display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: border-color .12s, background-color .12s; z-index: 3; }
+  .note-badge:hover { border-color: var(--cyan); background: var(--surface); }
+  .note-badge svg { width: 11px; height: 11px; }
+
+  .gen-chip { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: rgba(18,18,26,0.95); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid var(--border); font-family: var(--mono); z-index: 5; transition: opacity .2s; }
+  .gen-chip .pulse { width: 4px; height: 4px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); animation: pulse 1.4s ease-in-out infinite; }
+  .gen-chip .gen-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--cyan); }
+  .gen-chip .gen-sep { color: var(--muted); }
+  .gen-chip .gen-stats { font-size: 11px; color: var(--muted); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  .er-controls { position: absolute; bottom: 16px; right: 16px; display: flex; flex-direction: column; gap: 4px; z-index: 6; }
+  .canvas-wrap:not(:has(.er-pane.active)) .er-controls,
+  .canvas-wrap:not(:has(.er-pane.active)) .gen-chip { display: none; }
+  .er-controls button { position: relative; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-2); background: rgba(18,18,26,0.9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid var(--border); border-radius: 6px; transition: background-color .12s, color .12s, border-color .12s; }
+  .er-controls button:hover { background: var(--elevated); color: var(--text); border-color: var(--border-hover); }
+  .er-controls button svg { width: 14px; height: 14px; }
+  .er-controls .tip { position: absolute; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); background: var(--elevated); border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; font-family: var(--mono); font-size: 10px; color: var(--text-2); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .12s; }
+  .er-controls button:hover .tip { opacity: 1; }
+
+  .note-popover { display: none; position: absolute; width: 280px; background: var(--elevated); border: 1px solid var(--border-hover); border-radius: 12px; padding: 16px; z-index: 10; box-shadow: 0 12px 32px rgba(0,0,0,0.5); }
+  .np-label { display: block; font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+  .np-input { width: 100%; background: var(--input); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; color: var(--text); font-size: 13px; font-family: inherit; outline: none; resize: vertical; min-height: 64px; transition: border-color .12s; }
+  .np-input:focus { border-color: var(--cyan); }
+  .np-types { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 14px; }
+  .np-type { font-family: var(--mono); font-size: 10px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 999px; color: var(--text-2); cursor: pointer; transition: border-color .12s, color .12s; text-transform: uppercase; letter-spacing: 0.5px; }
+  .np-type.sel.info { border-color: rgba(6,182,212,0.5); color: var(--cyan); }
+  .np-type.sel.warning { border-color: rgba(250,204,21,0.5); color: var(--yellow); }
+  .np-type.sel.idea { border-color: rgba(168,85,247,0.5); color: var(--purple); }
+  .np-type.sel.todo { border-color: rgba(74,222,128,0.5); color: var(--green); }
+  .np-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .np-actions .btn-sec, .np-actions .btn-primary-sm { height: 28px; padding: 0 10px; font-size: 11px; }
+
+  .sql-pane { background: var(--bg); overflow: hidden; display: flex; }
+  .sql-dialect-badge { position: absolute; top: 14px; right: 16px; font-family: var(--mono); font-size: 11px; color: var(--text-2); padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); z-index: 2; }
+  .gutter { padding: 32px 16px 32px 32px; font-family: var(--mono); font-size: 11px; color: var(--muted); border-right: 1px solid var(--border); user-select: none; text-align: right; line-height: 1.7; white-space: pre; background: var(--bg); margin: 0; }
+  .code-area { flex: 1; padding: 32px; font-family: var(--mono); font-size: 13px; line-height: 1.7; overflow: auto; white-space: pre; color: var(--text); }
+  .kw { color: var(--cyan); }
+  .ty { color: var(--purple); }
+  .str { color: var(--green); }
+  .cm { color: var(--muted); font-style: italic; }
+
+  .notes-pane { background: var(--bg); overflow-y: auto; padding: 32px 20px; }
+  .notes-inner { max-width: 720px; margin: 0 auto; }
+  .notes-chips { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .chip { font-family: var(--mono); font-size: 11px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px; color: var(--text-2); cursor: pointer; transition: background-color .12s, color .12s, border-color .12s; }
+  .chip:hover { color: var(--text); border-color: var(--border-hover); }
+  .chip.active { background: rgba(6,182,212,0.1); color: var(--cyan); border-color: rgba(6,182,212,0.3); }
+  .note-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; transition: border-color .12s; }
+  .note-card:hover { border-color: var(--border-hover); }
+  .nc-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .nc-pill { font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .nc-pill.info { background: rgba(6,182,212,0.1); color: var(--cyan); }
+  .nc-pill.warning { background: rgba(250,204,21,0.1); color: var(--yellow); }
+  .nc-pill.idea { background: rgba(168,85,247,0.1); color: var(--purple); }
+  .nc-pill.todo { background: rgba(74,222,128,0.1); color: var(--green); }
+  .nc-target { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .nc-target code { color: var(--text-2); }
+  .nc-body { font-size: 14px; color: var(--text); line-height: 1.6; }
+  .nc-body code { font-family: var(--mono); font-size: 12px; color: var(--cyan); background: rgba(6,182,212,0.06); padding: 1px 5px; border-radius: 3px; }
+  .nc-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+  .nc-foot .ts { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .nc-foot .acts { display: flex; gap: 4px; opacity: 0; transition: opacity .12s; }
+  .note-card:hover .nc-foot .acts { opacity: 1; }
+
+  .chat-dock { background: var(--bg); border-top: 1px solid var(--border); min-height: 140px; height: 160px; max-height: 50vh; display: flex; flex-direction: column; position: relative; }
+  .drag-handle { position: absolute; top: -1px; left: 50%; transform: translate(-50%, -50%); width: 28px; height: 3px; background: var(--border-hover); border-radius: 999px; cursor: row-resize; transition: background-color .12s; z-index: 5; }
+  .drag-handle:hover { background: var(--border-strong); }
+  .dock-status { text-align: center; padding: 6px 0 0; height: 24px; flex: 0 0 24px; }
+  .dock-msgs-wrap { flex: 1; min-height: 0; position: relative; }
+  .dock-msgs-wrap::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 16px; background: linear-gradient(to bottom, var(--bg), transparent); pointer-events: none; z-index: 2; }
+  .dock-msgs { position: absolute; inset: 0; overflow-y: auto; padding: 12px 24px 12px; scrollbar-width: thin; }
+  .dock-msgs::-webkit-scrollbar { width: 4px; }
+  .dock-msgs::-webkit-scrollbar-thumb { background: rgba(6,182,212,0.25); border-radius: 4px; }
+  .dock-msgs::-webkit-scrollbar-thumb:hover { background: rgba(6,182,212,0.45); }
+  .msg { display: grid; grid-template-columns: 32px 1fr; gap: 12px; margin-bottom: 14px; align-items: flex-start; }
+  .msg .role { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; padding-top: 2px; }
+  .msg.user .role { color: var(--muted); }
+  .msg.ai .role { color: var(--cyan); }
+  .msg .body { color: var(--text-2); font-size: 14px; line-height: 1.6; }
+  .msg.ai .body { color: var(--text); }
+  .msg .body code { font-family: var(--mono); font-size: 12.5px; color: var(--text); }
+  .applied-pill { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10px; padding: 3px 8px; background: rgba(74,222,128,0.1); color: var(--green); border-radius: 999px; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .applied-pill svg { width: 10px; height: 10px; }
+
+  .typing { display: inline-flex; align-items: center; gap: 4px; }
+  .typing i { width: 5px; height: 5px; border-radius: 50%; background: var(--cyan); display: inline-block; animation: blink-dot 1.2s ease-in-out infinite; }
+  .typing i:nth-child(2) { animation-delay: .2s; }
+  .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink-dot { 0%, 100% { transform: scale(0.6); opacity: 0.5; } 50% { transform: scale(1); opacity: 1; } }
+
+  .input-bar { padding: 0 16px 8px; }
+  .input-shell { background: var(--input); border: 1px solid var(--border); border-radius: 8px; padding: 8px 8px 8px 14px; display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 4px 12px; transition: border-color .12s; }
+  .input-shell:focus-within { border-color: var(--cyan); }
+  .input-area { grid-column: 1 / -1; background: transparent; border: none; outline: none; color: var(--text); font-family: var(--mono); font-size: 13px; resize: none; width: 100%; line-height: 1.5; padding: 4px 0 0; max-height: 96px; }
+  .input-area::placeholder { color: var(--disabled); }
+  .input-controls { grid-column: 1 / 2; display: flex; align-items: center; gap: 8px; padding-bottom: 2px; }
+  .dialect-chip { display: inline-flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 11px; color: var(--text-2); padding: 4px 8px; border-radius: 4px; transition: background-color .12s, color .12s; }
+  .dialect-chip:hover { background: var(--elevated); color: var(--text); }
+  .dialect-chip svg { width: 10px; height: 10px; }
+  .send-btn { grid-column: 2 / 3; grid-row: 2 / 3; align-self: end; width: 32px; height: 32px; border-radius: 6px; background: linear-gradient(135deg, var(--cyan), var(--purple)); color: #0a0a0f; display: inline-flex; align-items: center; justify-content: center; transition: filter .15s, opacity .15s; }
+  .send-btn:hover { filter: brightness(1.1); }
+  .send-btn.disabled { opacity: 0.4; cursor: not-allowed; }
+  .send-btn svg { width: 14px; height: 14px; }
+
+  .input-hint { padding: 4px 16px 10px; font-family: var(--mono); font-size: 10px; color: var(--muted); display: flex; gap: 14px; }
+  .kbd { font-family: var(--mono); font-size: 10px; border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; color: var(--text-2); margin-right: 2px; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--elevated); border: 1px solid var(--border-hover); border-radius: 8px; padding: 12px 16px; display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text); z-index: 100; opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .2s, transform .2s; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast svg { width: 14px; height: 14px; color: var(--green); }
+
+  @media (max-width: 760px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 280px; z-index: 50; transform: translateX(-100%); transition: transform .2s; }
+    .app.mobile-open .sidebar { transform: translateX(0); }
+    .topbar { padding-left: 8px; }
+    .hamburger { display: inline-flex !important; }
+    .tabs .tab { padding: 0 12px; }
+    .tb-actions > .btn-sec, .tb-actions > .btn-gh, .tb-actions > .btn-primary-sm { display: none; }
+    .tb-actions .overflow { display: inline-flex !important; }
+  }
+  .hamburger { display: none; align-items: center; padding: 0 12px; color: var(--muted); }
+  .hamburger:hover { color: var(--text); }
+  .hamburger svg { width: 18px; height: 18px; }
+  .overflow { display: none; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="brandGrad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#06b6d4"/>
+      <stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+    <symbol id="i-panel-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-chev-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></symbol>
+    <symbol id="i-msg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="i-arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 5v14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></symbol>
+    <symbol id="i-zoom-in" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M8 11h6M11 8v6"/></symbol>
+    <symbol id="i-zoom-out" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M8 11h6"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></symbol>
+  </defs>
+</svg>
+
+<div class="app" id="app">
+
+  <aside class="sidebar" data-screen-label="Sidebar">
+    <div class="sb-top">
+      <div class="sb-brand-row">
+        <a class="brand" href="#">
+          <svg class="brand-mark" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#brandGrad)" stroke-width="1.2"/>
+            <rect x="6" y="6" width="12" height="3" rx="1" fill="url(#brandGrad)"/>
+            <rect x="6" y="11" width="12" height="1" rx="0.5" fill="#a1a1aa"/>
+            <rect x="6" y="14" width="12" height="1" rx="0.5" fill="#a1a1aa"/>
+            <rect x="6" y="17" width="8" height="1" rx="0.5" fill="#a1a1aa"/>
+          </svg>
+          <span class="brand-name">ER Database</span>
+        </a>
+        <button class="icon-btn" id="collapse-btn" aria-label="Свернуть">
+          <svg><use href="#i-panel-left"/></svg>
+          <span class="tooltip">⌘ B</span>
+        </button>
+      </div>
+      <div class="sb-search">
+        <svg><use href="#i-search"/></svg>
+        <input type="text" placeholder="Поиск чатов" />
+      </div>
+      <button class="btn-primary">
+        <svg><use href="#i-plus"/></svg>
+        <span class="lbl">Новый чат</span>
+      </button>
+    </div>
+
+    <div class="sb-mid">
+      <div class="micro sb-section-label">Чаты</div>
+      <div class="chat-list">
+        <div class="chat-item active">
+          <div class="ci-title">Биллинг SaaS · подписки и инвойсы</div>
+          <div class="ci-meta">2 ч назад · 8 сообщений</div>
+          <button class="ci-menu" aria-label="Действия"><svg><use href="#i-more"/></svg></button>
+        </div>
+        <div class="chat-item">
+          <div class="ci-title">Интернет-магазин с корзиной</div>
+          <div class="ci-meta">Вчера · 14 сообщений</div>
+          <button class="ci-menu" aria-label="Действия"><svg><use href="#i-more"/></svg></button>
+        </div>
+        <div class="chat-item">
+          <div class="ci-title">Блог с тегами и комментариями</div>
+          <div class="ci-meta">3 дня назад · 5 сообщений</div>
+          <button class="ci-menu" aria-label="Действия"><svg><use href="#i-more"/></svg></button>
+        </div>
+        <div class="chat-item">
+          <div class="ci-title">Курсы и прогресс студентов</div>
+          <div class="ci-meta">Пн · 21 сообщение</div>
+          <button class="ci-menu" aria-label="Действия"><svg><use href="#i-more"/></svg></button>
+        </div>
+        <div class="chat-item">
+          <div class="ci-title">CRM: лиды и сделки</div>
+          <div class="ci-meta">14 апр · 11 сообщений</div>
+          <button class="ci-menu" aria-label="Действия"><svg><use href="#i-more"/></svg></button>
+        </div>
+        <div class="chat-item">
+          <div class="ci-title">Логистика складов</div>
+          <div class="ci-meta">9 апр · 3 сообщения</div>
+          <button class="ci-menu" aria-label="Действия"><svg><use href="#i-more"/></svg></button>
+        </div>
+        <div class="chat-item">
+          <div class="ci-title">Соц. сеть: посты и подписки</div>
+          <div class="ci-meta">2 апр · 19 сообщений</div>
+          <button class="ci-menu" aria-label="Действия"><svg><use href="#i-more"/></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sb-bot">
+      <div class="user-row">
+        <div class="avatar">МК</div>
+        <span class="email">m.korovin@uni.ru</span>
+        <span class="chev"><svg><use href="#i-chev-up"/></svg></span>
+      </div>
+    </div>
+  </aside>
+
+  <section class="ws">
+
+    <header class="topbar" data-screen-label="Topbar">
+      <button class="hamburger" id="hamburger" aria-label="Меню"><svg><use href="#i-menu"/></svg></button>
+      <div class="tabs">
+        <button class="tab active" data-tab="er"><span class="dot"></span>Диаграмма</button>
+        <button class="tab" data-tab="sql">SQL</button>
+        <button class="tab" data-tab="notes">Заметки <span class="pill">3</span></button>
+      </div>
+
+      <div class="tb-actions" id="actions-er">
+        <button class="btn-primary-sm" id="save-btn" title="Несохранённые изменения">Сохранить</button>
+        <button class="btn-gh">Экспорт PNG</button>
+        <button class="overflow btn-gh"><svg><use href="#i-more"/></svg></button>
+      </div>
+
+      <div class="tb-actions" id="actions-sql" style="display:none">
+        <button class="btn-gh mono">PostgreSQL <svg><use href="#i-chev"/></svg></button>
+        <button class="btn-gh" title="Копировать"><svg><use href="#i-copy"/></svg></button>
+        <button class="btn-sec disabled" title="Доступно в Pro">
+          <svg><use href="#i-lock"/></svg> Скачать .sql
+        </button>
+        <button class="overflow btn-gh"><svg><use href="#i-more"/></svg></button>
+      </div>
+
+      <div class="tb-actions" id="actions-notes" style="display:none">
+        <button class="btn-primary-sm"><svg><use href="#i-plus"/></svg> Заметка</button>
+        <button class="overflow btn-gh"><svg><use href="#i-more"/></svg></button>
+      </div>
+    </header>
+
+    <main class="canvas-wrap">
+
+      <div class="gen-chip" id="gen-chip">
+        <span class="pulse"></span>
+        <span class="gen-label">Генерирую</span>
+        <span class="gen-sep">·</span>
+        <span class="gen-stats">5 таблиц · 4 связи</span>
+      </div>
+
+      <div class="er-controls" id="er-controls">
+        <button><svg><use href="#i-zoom-in"/></svg><span class="tip">Увеличить</span></button>
+        <button><svg><use href="#i-zoom-out"/></svg><span class="tip">Уменьшить</span></button>
+        <button><svg><use href="#i-fit"/></svg><span class="tip">По размеру экрана</span></button>
+      </div>
+
+      <div class="canvas-pane er-pane active" id="pane-er" data-screen-label="ER canvas">
+       <div class="er-inner">
+        <svg class="er-edges" width="1200" height="460" viewBox="0 0 1200 460">
+          <path d="M 300 83 C 380 83, 380 113, 460 113" stroke="#2a2a3e" stroke-width="1" fill="none"/>
+          <circle cx="460" cy="113" r="2.5" fill="#06b6d4"/>
+          <path d="M 680 83 C 760 83, 760 113, 840 113" stroke="#2a2a3e" stroke-width="1" fill="none"/>
+          <circle cx="840" cy="113" r="2.5" fill="#06b6d4"/>
+          <path d="M 840 83 C 760 83, 760 333, 680 333" stroke="#2a2a3e" stroke-width="1" fill="none"/>
+          <circle cx="680" cy="333" r="2.5" fill="#06b6d4"/>
+          <path d="M 300 83 C 400 90, 400 326, 300 333" stroke="#2a2a3e" stroke-width="1" fill="none"/>
+          <circle cx="300" cy="333" r="2.5" fill="#06b6d4"/>
+        </svg>
+
+        <div class="table-node" style="left: 80px; top: 40px;">
+          <div class="head">workspaces</div>
+          <div class="row"><span class="left"><svg class="ic ic-pk" viewBox="0 0 12 12" fill="currentColor"><path d="M4 1a3 3 0 1 0 2.83 4H9v2h2V5h1V3H6.83A3 3 0 0 0 4 1Zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>id</span><span class="type">uuid</span></div>
+          <div class="row"><span class="left"><span class="ic"></span>name</span><span class="type">varchar</span></div>
+          <div class="row"><span class="left"><span class="ic"></span>plan</span><span class="type">enum</span></div>
+          <div class="row"><span class="left"><span class="ic"></span>created_at</span><span class="type">timestamp</span></div>
+          <span class="note-badge"><svg><use href="#i-msg"/></svg>2</span>
+        </div>
+
+        <div class="table-node" style="left: 80px; top: 260px;">
+          <div class="head">users</div>
+          <div class="row"><span class="left"><svg class="ic ic-pk" viewBox="0 0 12 12" fill="currentColor"><path d="M4 1a3 3 0 1 0 2.83 4H9v2h2V5h1V3H6.83A3 3 0 0 0 4 1Zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>id</span><span class="type">uuid</span></div>
+          <div class="row"><span class="left"><svg class="ic ic-fk" viewBox="0 0 12 12" fill="currentColor"><path d="M5 3.5a2.5 2.5 0 0 1 2.5-2.5h1a2.5 2.5 0 0 1 0 5h-1V4.5h1a1 1 0 0 0 0-2h-1a1 1 0 0 0-1 1V4H5V3.5Zm2 5a2.5 2.5 0 0 1-2.5 2.5h-1a2.5 2.5 0 0 1 0-5h1V7.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1V8H7v.5Z"/></svg>workspace_id</span><span class="type">uuid</span></div>
+          <div class="row"><span class="left"><span class="ic"></span>email</span><span class="type">varchar</span></div>
+          <div class="row"><span class="left"><span class="ic"></span>role</span><span class="type">enum</span></div>
+        </div>
+
+        <div class="table-node active" style="left: 460px; top: 40px;">
+          <div class="head">subscriptions</div>
+          <div class="row"><span class="left"><svg class="ic ic-pk" viewBox="0 0 12 12" fill="currentColor"><path d="M4 1a3 3 0 1 0 2.83 4H9v2h2V5h1V3H6.83A3 3 0 0 0 4 1Zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>id</span><span class="type">uuid</span></div>
+          <div class="row"><span class="left"><svg class="ic ic-fk" viewBox="0 0 12 12" fill="currentColor"><path d="M5 3.5a2.5 2.5 0 0 1 2.5-2.5h1a2.5 2.5 0 0 1 0 5h-1V4.5h1a1 1 0 0 0 0-2h-1a1 1 0 0 0-1 1V4H5V3.5Zm2 5a2.5 2.5 0 0 1-2.5 2.5h-1a2.5 2.5 0 0 1 0-5h1V7.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1V8H7v.5Z"/></svg>workspace_id</span><span class="type">uuid</span></div>
+          <div class="row"><span class="left"><span class="ic"></span>status</span><span class="type">enum</span></div>
+          <div class="row"><span class="left"><span class="ic"></span>renews_at</span><span class="type">timestamp</span></div>
+          <span class="note-badge"><svg><use href="#i-msg"/></svg>1</span>
+        </div>
+
+        <div class="table-node" style="left: 840px; top: 40px;">
+          <div class="head">invoices</div>
+          <div class="row"><span class="left"><svg class="ic ic-pk" viewBox="0 0 12 12" fill="currentColor"><path d="M4 1a3 3 0 1 0 2.83 4H9v2h2V5h1V3H6.83A3 3 0 0 0 4 1Zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>id</span><span class="type">uuid</span></div>
+          <div class="row"><span class="left"><svg class="ic ic-fk" viewBox="0 0 12 12" fill="currentColor"><path d="M5 3.5a2.5 2.5 0 0 1 2.5-2.5h1a2.5 2.5 0 0 1 0 5h-1V4.5h1a1 1 0 0 0 0-2h-1a1 1 0 0 0-1 1V4H5V3.5Zm2 5a2.5 2.5 0 0 1-2.5 2.5h-1a2.5 2.5 0 0 1 0-5h1V7.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1V8H7v.5Z"/></svg>sub_id</span><span class="type">uuid</span></div>
+          <div class="row"><span class="left"><span class="ic"></span>total</span><span class="type">numeric</span></div>
+          <div class="row"><span class="left"><span class="ic"></span>issued_at</span><span class="type">timestamp</span></div>
+        </div>
+
+        <div class="table-node" style="left: 460px; top: 260px;">
+          <div class="head">line_items</div>
+          <div class="row"><span class="left"><svg class="ic ic-pk" viewBox="0 0 12 12" fill="currentColor"><path d="M4 1a3 3 0 1 0 2.83 4H9v2h2V5h1V3H6.83A3 3 0 0 0 4 1Zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>id</span><span class="type">uuid</span></div>
+          <div class="row"><span class="left"><svg class="ic ic-fk" viewBox="0 0 12 12" fill="currentColor"><path d="M5 3.5a2.5 2.5 0 0 1 2.5-2.5h1a2.5 2.5 0 0 1 0 5h-1V4.5h1a1 1 0 0 0 0-2h-1a1 1 0 0 0-1 1V4H5V3.5Zm2 5a2.5 2.5 0 0 1-2.5 2.5h-1a2.5 2.5 0 0 1 0-5h1V7.5h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1V8H7v.5Z"/></svg>invoice_id</span><span class="type">uuid</span></div>
+          <div class="row"><span class="left"><span class="ic"></span>amount</span><span class="type">numeric</span></div>
+          <div class="row"><span class="left"><span class="ic"></span>qty</span><span class="type">integer</span></div>
+        </div>
+
+        <div class="note-popover" id="np" style="left: 460px; top: 200px; display: none;">
+          <span class="np-label">Заметка к таблице · subscriptions</span>
+          <textarea class="np-input">Добавить trial_ends_at для бесплатного периода</textarea>
+          <div class="np-types">
+            <span class="np-type sel idea">idea</span>
+            <span class="np-type">info</span>
+            <span class="np-type">warning</span>
+            <span class="np-type">todo</span>
+          </div>
+          <div class="np-actions">
+            <button class="btn-sec">Отмена</button>
+            <button class="btn-primary-sm">Сохранить</button>
+          </div>
+        </div>
+       </div>
+      </div>
+
+      <div class="canvas-pane sql-pane" id="pane-sql" data-screen-label="SQL view">
+        <div class="sql-dialect-badge">PostgreSQL</div>
+        <pre class="gutter" id="gutter"></pre>
+        <div class="code-area" id="code"><span class="cm">-- Сгенерировано ER Database · диалект PostgreSQL</span>
+<span class="cm">-- 5 таблиц · 4 связи</span>
+
+<span class="kw">CREATE TABLE</span> workspaces (
+  id           <span class="ty">UUID</span> <span class="kw">PRIMARY KEY</span> <span class="kw">DEFAULT</span> gen_random_uuid(),
+  name         <span class="ty">VARCHAR</span>(120) <span class="kw">NOT NULL</span>,
+  plan         <span class="ty">VARCHAR</span>(20) <span class="kw">NOT NULL</span> <span class="kw">DEFAULT</span> <span class="str">'free'</span>,
+  created_at   <span class="ty">TIMESTAMPTZ</span> <span class="kw">NOT NULL</span> <span class="kw">DEFAULT</span> <span class="str">'now()'</span>
+);
+
+<span class="kw">CREATE TABLE</span> users (
+  id           <span class="ty">UUID</span> <span class="kw">PRIMARY KEY</span> <span class="kw">DEFAULT</span> gen_random_uuid(),
+  workspace_id <span class="ty">UUID</span> <span class="kw">NOT NULL</span> <span class="kw">REFERENCES</span> workspaces(id) <span class="kw">ON DELETE CASCADE</span>,
+  email        <span class="ty">VARCHAR</span>(255) <span class="kw">NOT NULL</span> <span class="kw">UNIQUE</span>,
+  role         <span class="ty">VARCHAR</span>(20) <span class="kw">NOT NULL</span> <span class="kw">DEFAULT</span> <span class="str">'member'</span>
+);
+
+<span class="kw">CREATE TABLE</span> subscriptions (
+  id           <span class="ty">UUID</span> <span class="kw">PRIMARY KEY</span> <span class="kw">DEFAULT</span> gen_random_uuid(),
+  workspace_id <span class="ty">UUID</span> <span class="kw">NOT NULL</span> <span class="kw">REFERENCES</span> workspaces(id) <span class="kw">ON DELETE CASCADE</span>,
+  status       <span class="ty">VARCHAR</span>(20) <span class="kw">NOT NULL</span>,
+  renews_at    <span class="ty">TIMESTAMPTZ</span> <span class="kw">NOT NULL</span>
+);
+
+<span class="kw">CREATE TABLE</span> invoices (
+  id           <span class="ty">UUID</span> <span class="kw">PRIMARY KEY</span> <span class="kw">DEFAULT</span> gen_random_uuid(),
+  sub_id       <span class="ty">UUID</span> <span class="kw">NOT NULL</span> <span class="kw">REFERENCES</span> subscriptions(id),
+  total        <span class="ty">NUMERIC</span>(10,2) <span class="kw">NOT NULL</span>,
+  issued_at    <span class="ty">TIMESTAMPTZ</span> <span class="kw">NOT NULL</span> <span class="kw">DEFAULT</span> <span class="str">'now()'</span>
+);
+
+<span class="kw">CREATE TABLE</span> line_items (
+  id           <span class="ty">UUID</span> <span class="kw">PRIMARY KEY</span> <span class="kw">DEFAULT</span> gen_random_uuid(),
+  invoice_id   <span class="ty">UUID</span> <span class="kw">NOT NULL</span> <span class="kw">REFERENCES</span> invoices(id) <span class="kw">ON DELETE CASCADE</span>,
+  amount       <span class="ty">NUMERIC</span>(10,2) <span class="kw">NOT NULL</span>,
+  qty          <span class="ty">INTEGER</span> <span class="kw">NOT NULL</span> <span class="kw">DEFAULT</span> 1
+);
+
+<span class="kw">CREATE INDEX</span> idx_users_workspace <span class="kw">ON</span> users(workspace_id);
+<span class="kw">CREATE INDEX</span> idx_invoices_sub <span class="kw">ON</span> invoices(sub_id);
+</div>
+      </div>
+
+      <div class="canvas-pane notes-pane" id="pane-notes" data-screen-label="Notes">
+        <div class="notes-inner">
+          <div class="notes-chips">
+            <button class="chip active">Все · 3</button>
+            <button class="chip">По таблицам · 2</button>
+            <button class="chip">General · 1</button>
+          </div>
+
+          <div class="note-card">
+            <div class="nc-head">
+              <span class="nc-pill idea">idea</span>
+              <span class="nc-target">on table: <code>subscriptions</code></span>
+            </div>
+            <div class="nc-body">Добавить <code>trial_ends_at</code> для бесплатного периода. Возможно, отдельный enum-статус <code>trialing</code>.</div>
+            <div class="nc-foot">
+              <span class="ts">12 мая, 14:08</span>
+              <span class="acts">
+                <button class="icon-btn"><svg><use href="#i-edit"/></svg></button>
+                <button class="icon-btn"><svg><use href="#i-trash"/></svg></button>
+              </span>
+            </div>
+          </div>
+
+          <div class="note-card">
+            <div class="nc-head">
+              <span class="nc-pill warning">warning</span>
+              <span class="nc-target">on table: <code>workspaces</code></span>
+            </div>
+            <div class="nc-body">Проверить уникальность <code>name</code> в рамках одного владельца. Сейчас уникальность глобальная — это создаст конфликт при импорте.</div>
+            <div class="nc-foot">
+              <span class="ts">12 мая, 13:42</span>
+              <span class="acts">
+                <button class="icon-btn"><svg><use href="#i-edit"/></svg></button>
+                <button class="icon-btn"><svg><use href="#i-trash"/></svg></button>
+              </span>
+            </div>
+          </div>
+
+          <div class="note-card">
+            <div class="nc-head">
+              <span class="nc-pill todo">todo</span>
+              <span class="nc-target">General</span>
+            </div>
+            <div class="nc-body">Перед публикацией шаблона: добавить индекс на <code>invoices.issued_at</code> и описание в маркдауне.</div>
+            <div class="nc-foot">
+              <span class="ts">12 мая, 11:15</span>
+              <span class="acts">
+                <button class="icon-btn"><svg><use href="#i-edit"/></svg></button>
+                <button class="icon-btn"><svg><use href="#i-trash"/></svg></button>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <footer class="chat-dock" id="dock" data-screen-label="Chat dock">
+      <span class="drag-handle" id="drag-handle"></span>
+      <div class="dock-status micro">Чат · 8 сообщений</div>
+
+      <div class="dock-msgs-wrap">
+        <div class="dock-msgs" id="msgs">
+          <div class="msg user">
+            <span class="role">Вы</span>
+            <div class="body">Биллинг для SaaS: workspace имеет много пользователей, у workspace одна подписка, инвойсы ссылаются на подписку, позиции инвойса — на инвойс.</div>
+          </div>
+          <div class="msg ai">
+            <span class="role">ИИ</span>
+            <div class="body">
+              Создал 5 таблиц: <code>workspaces</code>, <code>users</code>, <code>subscriptions</code>, <code>invoices</code>, <code>line_items</code>. Все связи через UUID с каскадным удалением где уместно.
+              <div><span class="applied-pill"><svg><use href="#i-check"/></svg>Применено к схеме</span></div>
+            </div>
+          </div>
+          <div class="msg user">
+            <span class="role">Вы</span>
+            <div class="body">Сделай <code>email</code> уникальным и добавь индекс по <code>workspace_id</code> в users.</div>
+          </div>
+          <div class="msg ai">
+            <span class="role">ИИ</span>
+            <div class="body">
+              Добавил <code>UNIQUE</code> на <code>users.email</code> и <code>INDEX idx_users_workspace</code>.
+              <div><span class="applied-pill"><svg><use href="#i-check"/></svg>Применено к схеме</span></div>
+            </div>
+          </div>
+          <div class="msg user">
+            <span class="role">Вы</span>
+            <div class="body">У invoices добавь enum-статус: <code>draft</code>, <code>open</code>, <code>paid</code>, <code>void</code>.</div>
+          </div>
+          <div class="msg ai">
+            <span class="role">ИИ</span>
+            <div class="body">
+              Создал enum <code>invoice_status</code> и колонку <code>invoices.status</code> с дефолтом <code>'draft'</code>.
+              <div><span class="applied-pill"><svg><use href="#i-check"/></svg>Применено к схеме</span></div>
+            </div>
+          </div>
+          <div class="msg user">
+            <span class="role">Вы</span>
+            <div class="body">Добавь поле <code>trial_ends_at</code> в subscriptions и enum-статус <code>trialing</code>.</div>
+          </div>
+          <div class="msg ai">
+            <span class="role">ИИ</span>
+            <div class="body"><span class="typing"><i></i><i></i><i></i></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-bar">
+        <div class="input-shell">
+          <textarea class="input-area" rows="1" placeholder="Опишите изменение схемы…"></textarea>
+          <div class="input-controls">
+            <button class="dialect-chip">PostgreSQL <svg><use href="#i-chev"/></svg></button>
+          </div>
+          <button class="send-btn disabled" aria-label="Отправить"><svg><use href="#i-arrow-up"/></svg></button>
+        </div>
+      </div>
+      <div class="input-hint">
+        <span><span class="kbd">⌘</span><span class="kbd">↵</span> для отправки</span>
+        <span><span class="kbd">⇧</span><span class="kbd">↵</span> для переноса</span>
+      </div>
+    </footer>
+
+  </section>
+</div>
+
+<div class="toast" id="toast"><svg><use href="#i-check"/></svg><span>Схема сохранена в библиотеку</span></div>
+
+<script>
+  const tabs = document.querySelectorAll('.tab');
+  const panes = { er: document.getElementById('pane-er'), sql: document.getElementById('pane-sql'), notes: document.getElementById('pane-notes') };
+  const acts = { er: document.getElementById('actions-er'), sql: document.getElementById('actions-sql'), notes: document.getElementById('actions-notes') };
+  tabs.forEach(t => t.addEventListener('click', () => {
+    const k = t.dataset.tab;
+    tabs.forEach(x => x.classList.toggle('active', x === t));
+    Object.entries(panes).forEach(([key, el]) => el.classList.toggle('active', key === k));
+    Object.entries(acts).forEach(([key, el]) => el.style.display = key === k ? '' : 'none');
+  }));
+
+  (function () {
+    const code = document.getElementById('code');
+    const lines = code.innerText.split('\n').length;
+    let s = '';
+    for (let i = 1; i <= lines; i++) s += i + '\n';
+    document.getElementById('gutter').textContent = s;
+  })();
+
+  const app = document.getElementById('app');
+  document.getElementById('collapse-btn').addEventListener('click', () => app.classList.toggle('collapsed'));
+  window.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); app.classList.toggle('collapsed'); }
+  });
+
+  const ham = document.getElementById('hamburger');
+  if (ham) ham.addEventListener('click', () => app.classList.toggle('mobile-open'));
+
+  (function () {
+    const dock = document.getElementById('dock');
+    const h = document.getElementById('drag-handle');
+    let startY, startH;
+    const onMove = e => {
+      const dy = startY - e.clientY;
+      const newH = Math.min(window.innerHeight * 0.5, Math.max(140, startH + dy));
+      dock.style.height = newH + 'px';
+    };
+    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    h.addEventListener('mousedown', e => { startY = e.clientY; startH = dock.offsetHeight; document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp); });
+    h.addEventListener('dblclick', () => {
+      const target = dock.offsetHeight > 240 ? 220 : Math.floor(window.innerHeight * 0.5);
+      dock.style.height = target + 'px';
+    });
+  })();
+
+  document.getElementById('save-btn').addEventListener('click', () => {
+    const t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2400);
+  });
+
+  const ta = document.querySelector('.input-area');
+  const send = document.querySelector('.send-btn');
+  ta.addEventListener('input', () => {
+    send.classList.toggle('disabled', !ta.value.trim());
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(96, ta.scrollHeight) + 'px';
+  });
+
+  document.querySelectorAll('.note-badge').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
+    const pop = document.getElementById('np');
+    if (pop) pop.style.display = 'block';
+  }));
+  document.addEventListener('click', e => {
+    const pop = document.getElementById('np');
+    if (!pop) return;
+    if (!pop.contains(e.target) && !e.target.closest('.note-badge')) pop.style.display = 'none';
+  });
+  document.querySelectorAll('.np-type').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.np-type').forEach(x => x.classList.remove('sel', 'info', 'warning', 'idea', 'todo'));
+    t.classList.add('sel');
+    t.classList.add(t.textContent.trim().toLowerCase());
+  }));
+
+  const m = document.getElementById('msgs');
+  m.scrollTop = m.scrollHeight;
+</script>
+
+</body>
+</html>

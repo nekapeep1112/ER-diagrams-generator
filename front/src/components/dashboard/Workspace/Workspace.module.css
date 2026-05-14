@@ -1,0 +1,14 @@
+.workspace {
+  display: grid;
+  grid-template-rows: 48px 1fr auto;
+  min-height: 0;
+  height: 100vh;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.canvasArea {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}

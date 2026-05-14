@@ -1,0 +1,97 @@
+.inputBar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 24px 16px;
+}
+
+.inputShell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--input);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px 8px;
+  transition: border-color 0.15s;
+}
+
+.inputShell:focus-within {
+  border-color: var(--cyan);
+}
+
+.input {
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  resize: none;
+  width: 100%;
+  min-height: 24px;
+  max-height: 96px;
+  line-height: 1.5;
+  padding: 0;
+}
+
+.input::placeholder {
+  color: var(--muted);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dialect {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+
+.dialect:hover {
+  color: var(--text-2);
+  background: var(--surface);
+}
+
+.send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--cyan) 0%, var(--purple) 100%);
+  color: #0a0a0f;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.12s, box-shadow 0.15s;
+  padding: 0;
+}
+
+.send:hover:not(:disabled) {
+  box-shadow: var(--glow);
+}
+
+.send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.hints {
+  display: flex;
+  gap: 16px;
+  padding: 0 4px;
+}

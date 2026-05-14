@@ -1,0 +1,1 @@
+export { MiniERPreview } from './MiniERPreview';

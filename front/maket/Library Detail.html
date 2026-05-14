@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Биллинг SaaS · Моя библиотека · ER Database</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0a0f; --surface: #12121a; --elevated: #1a1a26; --input: #0d0d14;
+    --border: #1e1e2e; --border-hover: #2a2a3e; --border-strong: #3a3a52;
+    --text: #fafafa; --text-2: #a1a1aa; --muted: #71717a; --disabled: #52525b;
+    --cyan: #06b6d4; --purple: #a855f7; --yellow: #facc15; --red: #f43f5e; --green: #4ade80;
+    --sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+  body { font-family: var(--sans); font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  h1, h2, h3, h4, p { margin: 0; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
+  .micro { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+
+  svg.lucide { width: 16px; height: 16px; flex: 0 0 16px; stroke-width: 1.5; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.lucide-14 { width: 14px; height: 14px; flex: 0 0 14px; }
+  svg.lucide-12 { width: 12px; height: 12px; flex: 0 0 12px; }
+
+  /* ── NAV ─────────────────────────── */
+  .nav { position: sticky; top: 0; z-index: 60; width: 100%; background: transparent; transition: background-color .2s, border-color .2s, backdrop-filter .2s; border-bottom: 1px solid transparent; }
+  .nav.scrolled { background: rgba(18,18,26,0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom-color: var(--border); }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text); font-size: 14px; font-weight: 500; letter-spacing: -0.2px; }
+  .brand-mark { width: 22px; height: 22px; flex: 0 0 22px; }
+  .nav-links { display: flex; align-items: center; gap: 28px; }
+  .nav-links a { color: var(--text-2); font-size: 13px; transition: color .15s; position: relative; padding: 4px 0; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active { color: var(--text); }
+  .nav-links a.active::after { content: ''; position: absolute; left: 0; right: 0; bottom: -19px; height: 1px; background: linear-gradient(90deg, var(--cyan), var(--purple)); }
+  .nav-right { display: flex; align-items: center; gap: 10px; }
+
+  .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 16px; border-radius: 8px; background: linear-gradient(135deg, var(--cyan), var(--purple)); color: #0a0a0f; font-size: 13px; font-weight: 500; transition: filter .15s, box-shadow .15s; }
+  .btn-primary:hover { filter: brightness(1.1); box-shadow: 0 0 24px rgba(6,182,212,0.25); }
+  .btn-primary.lg { height: 44px; font-size: 14px; width: 100%; box-shadow: 0 0 24px rgba(6,182,212,0.2); }
+  .btn-sec { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border-hover); color: var(--text); font-size: 13px; font-weight: 500; transition: background-color .15s, border-color .15s; }
+  .btn-sec:hover { background: var(--elevated); border-color: var(--border-strong); }
+  .btn-gh { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border-radius: 6px; color: var(--text-2); font-size: 12px; transition: background-color .15s, color .15s; }
+  .btn-gh:hover { background: var(--surface); color: var(--text); }
+  .btn-sm { height: 32px; font-size: 12px; padding: 0 12px; }
+
+  /* ── BREADCRUMB ───────────────── */
+  .crumb { padding: 32px 0 16px; display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.5px; }
+  .crumb a { color: var(--muted); transition: color .12s; }
+  .crumb a:hover { color: var(--text-2); }
+  .crumb .sep { color: var(--disabled); display: inline-flex; }
+  .crumb .cur { color: var(--text); }
+
+  /* ── HEADER ───────────────── */
+  .hero { padding-bottom: 56px; }
+  .hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 56px; align-items: start; }
+  .hero h1 { font-size: 40px; font-weight: 500; line-height: 1.1; letter-spacing: -0.6px; }
+  .hero .desc { font-size: 15px; color: var(--text-2); line-height: 1.6; max-width: 640px; margin-top: 14px; }
+  .hero-meta { margin-top: 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .hero-meta .item { display: inline-flex; align-items: center; gap: 6px; }
+  .hero-meta .item a { color: var(--text-2); transition: color .12s; }
+  .hero-meta .item a:hover { color: var(--text); }
+  .hero-meta .sep { color: var(--disabled); }
+  .av-16 { width: 16px; height: 16px; border-radius: 50%; background: linear-gradient(135deg, #ff6b6b, #feca57); color: #0a0a0f; font-size: 8px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; font-family: var(--mono); }
+
+  /* right column / sticky */
+  .hero-right { position: sticky; top: 80px; display: flex; flex-direction: column; gap: 16px; }
+  .cta-hint { font-family: var(--mono); font-size: 11px; color: var(--muted); text-align: center; margin-top: -2px; line-height: 1.5; }
+  .meta-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 4px 20px; }
+  .meta-row { padding: 14px 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); gap: 12px; }
+  .meta-row:last-child { border-bottom: none; }
+  .meta-row .k { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+  .meta-row .v { font-size: 13px; color: var(--text); display: inline-flex; align-items: center; gap: 6px; }
+  .cat-pill { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.3); color: var(--purple); }
+  .tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); font-family: var(--mono); font-size: 11px; color: var(--text-2); transition: border-color .12s, color .12s; cursor: pointer; }
+  .tag-pill:hover { border-color: rgba(6,182,212,0.5); color: var(--text); }
+  .tag-pill .pdot { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 6px; }
+
+  /* ── TABS BAR ─────────────────── */
+  .tabs-bar { position: sticky; top: 60px; z-index: 40; background: rgba(10,10,15,0.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .tabs-inner { display: flex; align-items: center; justify-content: space-between; height: 44px; }
+  .tabs-list { display: flex; align-items: stretch; gap: 4px; height: 100%; }
+  .tab { display: inline-flex; align-items: center; gap: 8px; padding: 0 14px; font-family: var(--mono); font-size: 12px; color: var(--muted); position: relative; transition: color .12s; height: 100%; }
+  .tab:hover { color: var(--text-2); }
+  .tab.active { color: var(--text); }
+  .tab.active::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 1px; background: linear-gradient(90deg, var(--cyan), var(--purple)); }
+  .tab .tdot { width: 5px; height: 5px; border-radius: 50%; background: var(--cyan); display: inline-block; opacity: 0; transition: opacity .12s; box-shadow: 0 0 6px rgba(6,182,212,0.6); }
+  .tab.active .tdot { opacity: 1; }
+  .tab .ct { color: var(--muted); }
+  .tabs-actions { display: flex; align-items: center; gap: 4px; }
+
+  /* ── CANVAS ─────────────────── */
+  .canvas-wrap { position: relative; min-height: 640px; background: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1.2px, transparent 0) 0 0/22px 22px, var(--bg); border-bottom: 1px solid var(--border); overflow: hidden; }
+  .canvas-inner { position: relative; width: 100%; height: 100%; min-height: 640px; padding: 56px 32px; }
+  .schema { position: relative; width: 100%; max-width: 1080px; margin: 0 auto; height: 540px; }
+
+  /* nodes */
+  .node { position: absolute; width: 230px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.3); overflow: hidden; cursor: default; transition: border-color .15s, box-shadow .15s; }
+  .node:hover { border-color: rgba(6,182,212,0.5); box-shadow: 0 0 0 1px rgba(6,182,212,0.15), 0 8px 24px rgba(6,182,212,0.08); }
+  .node.selected { border-color: rgba(6,182,212,0.7); box-shadow: 0 0 0 1px rgba(6,182,212,0.3), 0 8px 28px rgba(6,182,212,0.15); }
+  .node-head { padding: 8px 12px; background: linear-gradient(90deg, var(--cyan), var(--purple)); color: #0a0a0f; font-family: var(--mono); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
+  .node-cols { padding: 4px 0; }
+  .col-row { display: flex; align-items: center; gap: 8px; padding: 5px 12px; font-family: var(--mono); font-size: 11px; color: var(--text-2); }
+  .col-row .cn { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .col-row .ct { color: var(--muted); font-size: 10px; }
+  .col-row .lic { width: 12px; height: 12px; flex: 0 0 12px; display: inline-flex; align-items: center; justify-content: center; }
+  .col-row .lic.pk { color: var(--yellow); }
+  .col-row .lic.fk { color: var(--cyan); }
+  .col-row .lic.none { visibility: hidden; }
+
+  /* edges svg */
+  .edges { position: absolute; inset: 0; pointer-events: none; width: 100%; height: 100%; }
+
+  /* node tooltip popover */
+  .node-pop { position: absolute; background: var(--elevated); border: 1px solid var(--border-strong); border-radius: 8px; padding: 12px 14px; min-width: 240px; box-shadow: 0 12px 32px rgba(0,0,0,0.5); font-size: 12px; pointer-events: auto; }
+  .node-pop .ph { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 8px; }
+  .node-pop .pmeta { display: flex; flex-direction: column; gap: 4px; font-family: var(--mono); font-size: 11px; color: var(--text-2); }
+  .node-pop .pmeta .ln { display: flex; justify-content: space-between; gap: 12px; }
+  .node-pop .pmeta .ln .vv { color: var(--text); }
+
+  /* canvas floating chrome */
+  .read-chip { position: absolute; bottom: 24px; right: 168px; padding: 6px 11px; border-radius: 999px; background: rgba(18,18,26,0.9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid var(--border); font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+  .read-chip .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); }
+
+  .zoom-controls { position: absolute; bottom: 24px; right: 24px; display: flex; align-items: center; background: rgba(18,18,26,0.95); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+  .zoom-controls button { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-2); border-radius: 6px; transition: background-color .12s, color .12s; }
+  .zoom-controls button:hover { background: var(--surface); color: var(--text); }
+  .zoom-controls .zlevel { font-family: var(--mono); font-size: 11px; color: var(--text-2); padding: 0 8px; user-select: none; }
+
+  /* ── RELATED ─────────────────── */
+  .related { padding: 80px 0; }
+  .related .micro { display: block; margin-bottom: 10px; }
+  .related h2 { font-size: 24px; font-weight: 500; letter-spacing: -0.4px; margin-bottom: 28px; }
+  .related-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .tcard { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; transition: border-color .15s, transform .15s; display: flex; flex-direction: column; }
+  .tcard:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+  .thumb { height: 140px; position: relative; background: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0) 0 0/16px 16px, var(--bg); border-bottom: 1px solid var(--border); overflow: hidden; }
+  .thumb .tbox { position: absolute; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; width: 60px; overflow: hidden; }
+  .thumb .tbox .hh { height: 8px; background: linear-gradient(90deg, var(--cyan), var(--purple)); }
+  .thumb .tbox .ll { height: 3px; margin: 4px 5px; background: #2a2a3e; border-radius: 1px; }
+  .thumb svg.curves { position: absolute; inset: 0; }
+  .tbody { padding: 14px 16px 16px; flex: 1; display: flex; flex-direction: column; }
+  .title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .title-row h3 { font-size: 15px; font-weight: 500; line-height: 1.3; letter-spacing: -0.2px; }
+  .cat-badge { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-2); padding: 3px 8px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 999px; white-space: nowrap; flex: 0 0 auto; }
+  .desc-2 { font-size: 13px; color: var(--text-2); line-height: 1.5; margin-top: 8px; min-height: 39px; }
+  .footer-row { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .author { display: inline-flex; align-items: center; gap: 6px; }
+  .author .av { width: 16px; height: 16px; border-radius: 50%; color: #0a0a0f; font-size: 8px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; font-family: var(--mono); }
+  .uses { display: inline-flex; align-items: center; gap: 5px; }
+
+  /* ── FOOTER ─────────────── */
+  footer { border-top: 1px solid var(--border); padding: 56px 0 36px; }
+  .footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 56px; margin-bottom: 48px; }
+  .footer-col h4 { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin: 0 0 16px; }
+  .footer-col ul { list-style: none; padding: 0; margin: 0; }
+  .footer-col li { margin-bottom: 10px; }
+  .footer-col a { color: var(--text-2); font-size: 13px; }
+  .footer-col a:hover { color: var(--text); }
+  .footer-brand p { font-size: 12px; color: var(--muted); margin-top: 12px; max-width: 240px; line-height: 1.6; }
+  .footer-bot { padding-top: 24px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--muted); font-family: var(--mono); letter-spacing: 0.5px; gap: 12px; }
+
+  /* toast */
+  .btn-sec { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; font-size: 13px; color: var(--text-2); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; transition: border-color .12s, color .12s, background-color .12s; cursor: pointer; font-family: inherit; text-align: left; }
+  .btn-sec:hover { border-color: var(--border-hover); color: var(--text); background: var(--elevated); }
+
+  /* modal */
+  .modal-root { position: fixed; inset: 0; z-index: 300; background: rgba(5,5,10,0.7); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; padding: 24px; }
+  .modal { width: 100%; max-width: 560px; background: var(--elevated); border: 1px solid var(--border-hover); border-radius: 14px; box-shadow: 0 32px 80px rgba(0,0,0,0.6); overflow: hidden; }
+  .modal-hd { padding: 20px 24px 14px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border); }
+  .modal-hd h3 { font-size: 17px; font-weight: 500; letter-spacing: -0.2px; margin: 0; display: inline-flex; align-items: center; gap: 10px; }
+  .modal-hd h3 .mi { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(135deg, rgba(6,182,212,0.18), rgba(168,85,247,0.18)); border: 1px solid rgba(6,182,212,0.3); display: inline-flex; align-items: center; justify-content: center; color: var(--cyan); }
+  .modal-x { width: 28px; height: 28px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); background: transparent; border: none; cursor: pointer; }
+  .modal-x:hover { color: var(--text); background: var(--surface); }
+  .modal-body { padding: 20px 24px 4px; }
+  .modal-foot { padding: 16px 24px 20px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border); margin-top: 20px; }
+  .field { margin-bottom: 18px; }
+  .field label { display: block; font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 8px; }
+  .field .lab-row { display: flex; align-items: center; justify-content: space-between; }
+  .field .lab-row .cnt { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .field .inp, .field textarea, .field select { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-family: inherit; font-size: 13px; outline: none; transition: border-color .12s; }
+  .field .inp:focus, .field textarea:focus, .field select:focus { border-color: var(--cyan); }
+  .field textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
+  .field .help { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .check-row { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: border-color .12s; }
+  .check-row:hover { border-color: var(--border-hover); }
+  .check-row .cb { flex: 0 0 16px; width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border-hover); margin-top: 1px; display: inline-flex; align-items: center; justify-content: center; background: var(--surface); color: transparent; }
+  .check-row.on .cb { background: var(--cyan); border-color: var(--cyan); color: #0a0a0f; }
+  .check-row .t { font-size: 13px; color: var(--text); margin-bottom: 2px; }
+  .check-row .d { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .tag-input { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; }
+  .tag-input input { flex: 1; min-width: 100px; background: transparent; border: none; outline: none; color: var(--text); font-size: 13px; padding: 4px 6px; font-family: inherit; }
+
+  .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--elevated); border: 1px solid var(--border-hover); border-radius: 8px; padding: 10px 16px; font-size: 13px; color: var(--text); box-shadow: 0 12px 32px rgba(0,0,0,0.5); display: inline-flex; align-items: center; gap: 8px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 200; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast .ic { color: var(--green); }
+
+  @media (max-width: 1080px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 32px; }
+    .hero-right { position: static; }
+    .related-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 760px) {
+    .container { padding: 0 20px; }
+    .nav-links { display: none; }
+    .hero h1 { font-size: 30px; }
+    .schema { transform: scale(0.7); transform-origin: top left; }
+    .related-grid { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+    .read-chip { right: 16px; bottom: 64px; }
+    .zoom-controls { right: 16px; bottom: 16px; }
+  }
+</style>
+</head>
+<body data-screen-label="Template Detail">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="brandGrad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#06b6d4"/>
+      <stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+    <symbol id="i-chev-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+    <symbol id="i-git-fork" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9"/><path d="M12 12v3"/></symbol>
+    <symbol id="i-share-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></symbol>
+    <symbol id="i-table" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></symbol>
+    <symbol id="i-link-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" y1="12" x2="16" y2="12"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5v14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></symbol>
+    <symbol id="i-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  </defs>
+</svg>
+
+<!-- ── NAV ───────────────── -->
+<nav class="nav" id="nav" data-screen-label="Nav">
+  <div class="container nav-inner">
+    <a class="brand" href="#">
+      <svg class="brand-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#brandGrad)" stroke-width="1.2"/>
+        <rect x="6" y="6" width="12" height="3" rx="1" fill="url(#brandGrad)"/>
+        <rect x="6" y="11" width="12" height="1" rx="0.5" fill="#a1a1aa"/>
+        <rect x="6" y="14" width="12" height="1" rx="0.5" fill="#a1a1aa"/>
+        <rect x="6" y="17" width="8" height="1" rx="0.5" fill="#a1a1aa"/>
+      </svg>
+      <span>ER Database</span>
+    </a>
+    <div class="nav-links">
+      <a href="#" class="active">Шаблоны</a>
+      <a href="#">Тарифы</a>
+      <a href="#">Документация</a>
+    </div>
+    <div class="nav-right" style="position:relative">
+      <button class="nav-avatar" id="avBtn" style="display:inline-flex; align-items:center; gap:8px; height:36px; padding:4px 10px 4px 4px; border-radius:999px; background:var(--surface); border:1px solid var(--border); cursor:pointer">
+        <span style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#5b6cff,#c850c0);color:#fafafa;font-size:11px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono)">МК</span>
+        <span style="color:var(--muted)"><svg class="lucide lucide-12" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <!-- ── BREADCRUMB ───────────────── -->
+  <div class="crumb" data-screen-label="Breadcrumb">
+    <a href="Library.html">Моя библиотека</a>
+    <span class="sep"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-chev-right"/></svg></span>
+    <span class="cur">Биллинг SaaS</span>
+  </div>
+
+  <!-- ── HEADER ───────────────── -->
+  <section class="hero" data-screen-label="Header">
+    <div class="hero-grid">
+      <div>
+        <h1>Биллинг SaaS · подписки и инвойсы</h1>
+        <p class="desc">Биллинг для B2B SaaS: воркспейсы, пользователи, подписки, инвойсы и позиции инвойса с tracking использования. Включает trial state и refund handling.</p>
+        <div class="hero-meta">
+          <span class="item"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-calendar"/></svg>создано 12 апреля</span>
+          <span class="sep">·</span>
+          <span class="item"><svg class="lucide lucide-12" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M12 7v5l3 2" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round"/></svg>обновлено 2 ч назад</span>
+          <span class="sep">·</span>
+          <span class="item"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-git-fork"/></svg>v3 (3 правки)</span>
+        </div>
+      </div>
+
+      <aside class="hero-right">
+        <button class="btn-primary lg" id="editBtn">
+          <svg class="lucide" viewBox="0 0 24 24"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="m15 5 4 4" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span>Открыть в редакторе</span>
+        </button>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <button class="btn-sec" id="publishBtn" style="width:100%; justify-content:flex-start"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-share-2"/></svg><span>Опубликовать как шаблон</span></button>
+          <button class="btn-sec" style="width:100%; justify-content:flex-start; opacity:0.55; cursor:not-allowed" title="Доступно в Pro"><svg class="lucide lucide-14" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Скачать SQL</span><svg class="lucide lucide-12" viewBox="0 0 24 24" style="margin-left:auto; color:var(--muted)"><path d="M5 11V7a5 5 0 1 1 10 0v4M5 11h10v9H5z" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="btn-sec" style="width:100%; justify-content:flex-start"><svg class="lucide lucide-14" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" fill="none" stroke-width="1.5"/><circle cx="9" cy="9" r="2" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="m21 15-5-5L5 21" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Экспорт PNG</span></button>
+          <button class="btn-sec" style="width:100%; justify-content:flex-start; color:#f43f5e; border-color:rgba(244,63,94,0.25)"><svg class="lucide lucide-14" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Удалить</span></button>
+        </div>
+
+        <div class="meta-card">
+          <div class="meta-row"><span class="k">Таблиц</span><span class="v">5</span></div>
+          <div class="meta-row"><span class="k">Связей</span><span class="v">4</span></div>
+          <div class="meta-row"><span class="k">Диалект</span><span class="v">PostgreSQL</span></div>
+          <div class="meta-row"><span class="k">Статус</span><span class="v" style="color:var(--cyan)">Опубликовано · 47 форков</span></div>
+        </div>
+
+        <div>
+          <div class="micro" style="margin-bottom:8px">Теги</div>
+          <div class="tags-wrap">
+            <span class="tag-pill"><span class="pdot" style="background:var(--cyan)"></span>billing<button style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0 0 0 2px;display:inline-flex"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span>
+            <span class="tag-pill"><span class="pdot" style="background:var(--green)"></span>subscriptions<button style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0 0 0 2px;display:inline-flex"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span>
+            <span class="tag-pill" style="border-style:dashed; color:var(--muted)"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Тег</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+</div>
+
+<!-- ── TABS BAR ─────────────────── -->
+<div class="tabs-bar" data-screen-label="Tabs">
+  <div class="container tabs-inner">
+    <div class="tabs-list">
+      <button class="tab active"><span class="tdot"></span>Диаграмма</button>
+      <button class="tab"><span class="tdot"></span>SQL</button>
+      <button class="tab"><span class="tdot"></span>Заметки <span class="ct">(3)</span></button>
+      <button class="tab"><span class="tdot"></span>История</button>
+    </div>
+    <div class="tabs-actions">
+      <button class="btn-gh" id="shareBtn">
+        <svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-share-2"/></svg>
+        <span>Поделиться</span>
+      </button>
+      <button class="btn-gh">
+        <svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-flag"/></svg>
+        <span>Сообщить о проблеме</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CANVAS ─────────────────── -->
+<div class="canvas-wrap" data-screen-label="Canvas">
+  <div class="canvas-inner">
+    <div class="schema" id="schema">
+      <!-- Edges layer -->
+      <svg class="edges" viewBox="0 0 1080 540" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="eg" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#06b6d4" stop-opacity="0.7"/>
+            <stop offset="1" stop-color="#a855f7" stop-opacity="0.7"/>
+          </linearGradient>
+        </defs>
+        <!-- workspaces → users -->
+        <path d="M260 138 C 340 138, 340 138, 420 138" stroke="url(#eg)" stroke-width="1.5" fill="none"/>
+        <circle cx="260" cy="138" r="3" fill="#06b6d4"/>
+        <circle cx="420" cy="138" r="3" fill="#a855f7"/>
+        <!-- workspaces → subscriptions, arcs above users -->
+        <path d="M145 50 C 200 0, 780 0, 835 50" stroke="url(#eg)" stroke-width="1.5" fill="none"/>
+        <circle cx="145" cy="50" r="3" fill="#06b6d4"/>
+        <circle cx="835" cy="50" r="3" fill="#a855f7"/>
+        <!-- subscriptions → invoices (bottom-left of subs to top-right of invoices) -->
+        <path d="M835 250 C 835 300, 380 300, 320 340" stroke="url(#eg)" stroke-width="1.5" fill="none"/>
+        <circle cx="835" cy="250" r="3" fill="#06b6d4"/>
+        <circle cx="320" cy="340" r="3" fill="#a855f7"/>
+        <!-- invoices → line_items -->
+        <path d="M380 410 C 500 410, 600 410, 720 410" stroke="url(#eg)" stroke-width="1.5" fill="none"/>
+        <circle cx="380" cy="410" r="3" fill="#06b6d4"/>
+        <circle cx="720" cy="410" r="3" fill="#a855f7"/>
+      </svg>
+
+      <!-- Top row: workspaces, users, subscriptions -->
+      <div class="node" style="left:30px; top:50px" data-name="workspaces" data-cols="6" data-refs="2">
+        <div class="node-head">workspaces</div>
+        <div class="node-cols">
+          <div class="col-row"><span class="lic pk"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-key"/></svg></span><span class="cn">id</span><span class="ct">uuid</span></div>
+          <div class="col-row"><span class="lic none"></span><span class="cn">name</span><span class="ct">text</span></div>
+          <div class="col-row"><span class="lic none"></span><span class="cn">slug</span><span class="ct">text</span></div>
+          <div class="col-row"><span class="lic none"></span><span class="cn">plan</span><span class="ct">text</span></div>
+          <div class="col-row"><span class="lic none"></span><span class="cn">created_at</span><span class="ct">timestamptz</span></div>
+        </div>
+      </div>
+
+      <div class="node selected" style="left:420px; top:50px" data-name="users" data-cols="7" data-refs="0">
+        <div class="node-head">users</div>
+        <div class="node-cols">
+          <div class="col-row"><span class="lic pk"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-key"/></svg></span><span class="cn">id</span><span class="ct">uuid</span></div>
+          <div class="col-row"><span class="lic fk"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-link-2"/></svg></span><span class="cn">workspace_id</span><span class="ct">uuid</span></div>
+          <div class="col-row"><span class="lic none"></span><span class="cn">email</span><span class="ct">citext</span></div>
+          <div class="col-row"><span class="lic none"></span><span class="cn">role</span><span class="ct">text</span></div>
+          <div class="col-row"><span class="lic none"></span><span class="cn">created_at</span><span class="ct">timestamptz</span></div>
+        </div>
+      </div>
+
+      <div class="node" style="left:720px; top:50px" data-name="subscriptions" data-cols="8" data-refs="1">
+        <div class="node-head">subscriptions</div>
+        <div class="node-cols">
+          <div class="col-row"><span class="lic pk"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-key"/></svg></span><span class="cn">id</span><span class="ct">uuid</span></div>
+          <div class="col-row"><span class="lic fk"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-link-2"/></svg></span><span class="cn">workspace_id</span><span class="ct">uuid</span></div>
+          <div class="col-row"><span class="lic none"></span><span class="cn">plan_id</span><span class="ct">text</span></div>
+          <div class="col-row"><span class="lic none"></span><span class="cn">status</span><span class="ct">text</span></div>
+          <div class="col-row"><span class="lic none"></span><span class="cn">trial_ends_at</span><span class="ct">timestamptz</span></div>
+          <div class="col-row"><span class="lic none"></span><span class="cn">current_period_end</span><span class="ct">timestamptz</span></div>
+        </div>
+      </div>
+
+      <!-- Bottom row: invoices, line_items -->
+      <div class="node" style="left:150px; top:340px" data-name="invoices" data-cols="6" data-refs="1">
+        <div class="node-head">invoices</div>
+        <div class="node-cols">
+          <div class="col-row"><span class="lic pk"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-key"/></svg></span><span class="cn">id</span><span class="ct">uuid</span></div>
+          <div class="col-row"><span class="lic fk"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-link-2"/></svg></span><span class="cn">subscription_id</span><span class="ct">uuid</span></div>
+          <div class="col-row"><span class="lic none"></span><span class="cn">total_cents</span><span class="ct">int</span></div>
+          <div class="col-row"><span class="lic none"></span><span class="cn">status</span><span class="ct">text</span></div>
+          <div class="col-row"><span class="lic none"></span><span class="cn">paid_at</span><span class="ct">timestamptz</span></div>
+        </div>
+      </div>
+
+      <div class="node" style="left:720px; top:340px" data-name="line_items" data-cols="6" data-refs="0">
+        <div class="node-head">line_items</div>
+        <div class="node-cols">
+          <div class="col-row"><span class="lic pk"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-key"/></svg></span><span class="cn">id</span><span class="ct">uuid</span></div>
+          <div class="col-row"><span class="lic fk"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-link-2"/></svg></span><span class="cn">invoice_id</span><span class="ct">uuid</span></div>
+          <div class="col-row"><span class="lic none"></span><span class="cn">description</span><span class="ct">text</span></div>
+          <div class="col-row"><span class="lic none"></span><span class="cn">quantity</span><span class="ct">int</span></div>
+          <div class="col-row"><span class="lic none"></span><span class="cn">unit_amount</span><span class="ct">int</span></div>
+        </div>
+      </div>
+
+      <!-- Popover for selected node (users), below the node with leader line -->
+      <svg class="edges" style="z-index:2" viewBox="0 0 1080 540" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M535 226 L 535 268" stroke="#3a3a52" stroke-width="1" stroke-dasharray="3 3" fill="none"/>
+        <circle cx="535" cy="226" r="2" fill="#06b6d4"/>
+      </svg>
+      <div class="node-pop" id="popUsers" style="left:420px; top:268px">
+        <div class="ph"><svg class="lucide lucide-14" style="color:var(--cyan)" viewBox="0 0 24 24"><use href="#i-table"/></svg>users</div>
+        <div class="pmeta">
+          <div class="ln"><span>Колонок</span><span class="vv">7</span></div>
+          <div class="ln"><span>Тип</span><span class="vv">справочник</span></div>
+          <div class="ln"><span>Ссылается на</span><span class="vv">workspaces</span></div>
+          <div class="ln"><span>Используется в</span><span class="vv">2 таблицах</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="read-chip">
+    <span class="dot"></span>
+    <span>Превью схемы · только для чтения</span>
+  </div>
+
+  <div class="zoom-controls">
+    <button aria-label="Уменьшить"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-minus"/></svg></button>
+    <span class="zlevel">100%</span>
+    <button aria-label="Увеличить"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-plus"/></svg></button>
+    <button aria-label="По размеру"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-maximize"/></svg></button>
+  </div>
+</div>
+
+<!-- ── RELATED ─────────────────── -->
+<div class="container">
+  <section class="related" data-screen-label="Related">
+    <span class="micro">Из твоей библиотеки</span>
+    <h2>Другие схемы в этой категории</h2>
+    <div class="related-grid" id="relatedGrid"></div>
+  </section>
+</div>
+
+<!-- ── FOOTER ───────────────── -->
+<footer data-screen-label="Footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="#">
+          <svg class="brand-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#brandGrad)" stroke-width="1.2"/>
+            <rect x="6" y="6" width="12" height="3" rx="1" fill="url(#brandGrad)"/>
+            <rect x="6" y="11" width="12" height="1" rx="0.5" fill="#a1a1aa"/>
+            <rect x="6" y="14" width="12" height="1" rx="0.5" fill="#a1a1aa"/>
+            <rect x="6" y="17" width="8" height="1" rx="0.5" fill="#a1a1aa"/>
+          </svg>
+          <span>ER Database</span>
+        </a>
+        <p>Проектирование БД на естественном языке. Нормализованные схемы, интерактивные ER-диаграммы и SQL под любую базу.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Продукт</h4>
+        <ul><li><a href="#">Возможности</a></li><li><a href="#">Шаблоны</a></li><li><a href="#">Тарифы</a></li><li><a href="#">Что нового</a></li></ul>
+      </div>
+      <div class="footer-col">
+        <h4>Ресурсы</h4>
+        <ul><li><a href="#">Документация</a></li><li><a href="#">Гайды</a></li><li><a href="#">Справочник SQL</a></li><li><a href="#">Сообщество</a></li></ul>
+      </div>
+      <div class="footer-col">
+        <h4>Правовое</h4>
+        <ul><li><a href="#">Условия</a></li><li><a href="#">Конфиденциальность</a></li><li><a href="#">Безопасность</a></li><li><a href="#">DPA</a></li></ul>
+      </div>
+    </div>
+    <div class="footer-bot">
+      <span>© 2025 ER Database. Собрано на Django + Next.js.</span>
+      <span>v1.4.0</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ── MODAL: Publish form ── -->
+<div class="modal-root" id="mdRoot" data-screen-label="Modal Publish">
+  <div class="modal">
+    <div id="mdForm">
+      <div class="modal-hd">
+        <h3><span class="mi"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-share-2"/></svg></span>Опубликовать как шаблон</h3>
+        <button class="modal-x" data-mdclose><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <div class="lab-row"><label>Название шаблона</label><span class="cnt">23 / 60</span></div>
+          <input class="inp" value="Биллинг SaaS · подписки"/>
+        </div>
+        <div class="field">
+          <div class="lab-row"><label>Описание</label><span class="cnt">114 / 280</span></div>
+          <textarea>Биллинг для B2B SaaS: воркспейсы, пользователи, подписки, инвойсы и позиции инвойса с tracking использования.</textarea>
+          <div class="help">Поддерживается Markdown. Будет показано на странице шаблона.</div>
+        </div>
+        <div class="field">
+          <label>Категория</label>
+          <select class="inp"><option>SaaS</option><option>E-commerce</option><option>CMS</option><option>Аналитика</option><option>Социальные</option><option>Другое</option></select>
+        </div>
+        <div class="field">
+          <label>Теги · до 5</label>
+          <div class="tag-input">
+            <span class="tag-pill"><span class="pdot" style="background:var(--cyan)"></span>billing<button style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0 0 0 2px;display:inline-flex"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span>
+            <span class="tag-pill"><span class="pdot" style="background:var(--green)"></span>subscriptions<button style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0 0 0 2px;display:inline-flex"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span>
+            <input placeholder="Добавить тег..."/>
+          </div>
+          <div class="help">Подсказки: <span style="color:var(--text-2)">stripe</span>, <span style="color:var(--text-2)">invoices</span>, <span style="color:var(--text-2)">multitenant</span></div>
+        </div>
+        <div class="field">
+          <label class="check-row on" id="ckTos">
+            <span class="cb"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+            <span>
+              <div class="t">Подтверждаю условия публикации</div>
+              <div class="d">Шаблон станет доступен всем, включая anon-посетителей. Я могу скрыть его в любой момент.</div>
+            </span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-gh" data-mdclose>Отмена</button>
+        <button class="btn-primary" id="publishConfirm"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-share-2"/></svg><span>Опубликовать</span></button>
+      </div>
+    </div>
+
+    <div id="mdSuccess" style="display:none">
+      <div class="modal-hd">
+        <h3><span class="mi" style="color:var(--green); border-color:rgba(34,197,94,0.4); background:linear-gradient(135deg,rgba(34,197,94,0.18),rgba(6,182,212,0.18))"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-check"/></svg></span>Шаблон опубликован</h3>
+        <button class="modal-x" data-mdclose><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:13px; color:var(--text-2); line-height:1.6; margin:0 0 16px;">Шаблон <span style="color:var(--text)">«Биллинг SaaS · подписки»</span> теперь публичный. На странице шаблонов появится через несколько секунд.</p>
+        <div class="field">
+          <label>Публичная ссылка</label>
+          <div style="display:flex; gap:6px;">
+            <input class="inp" readonly value="https://erdb.app/templates/saas-billing-mk" style="font-family:var(--mono); font-size:12px; color:var(--text-2)"/>
+            <button class="btn-sec" style="flex:0 0 auto"><svg class="lucide lucide-14" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" fill="none" stroke-width="1.5"/></svg><span>Копировать</span></button>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; padding:12px 14px; background:var(--bg); border:1px solid var(--border); border-radius:8px; font-family:var(--mono); font-size:11px;">
+          <div><div style="color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; font-size:10px; margin-bottom:4px">Категория</div><div style="color:var(--text)">SaaS</div></div>
+          <div><div style="color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; font-size:10px; margin-bottom:4px">Видимость</div><div style="color:var(--green)">Публичная</div></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-gh" data-mdclose>Закрыть</button>
+        <button class="btn-primary" data-mdclose><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-share-2"/></svg><span>Открыть страницу шаблона</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><svg class="lucide lucide-14 ic" viewBox="0 0 24 24"><use href="#i-check"/></svg><span id="toastText">Ссылка скопирована</span></div>
+
+<script>
+/* ── nav scroll effect ── */
+const nav = document.getElementById('nav');
+const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
+window.addEventListener('scroll', onScroll, { passive: true });
+onScroll();
+
+/* ── tabs ── */
+document.querySelectorAll('.tab').forEach((t, _, arr) => {
+  t.addEventListener('click', () => arr.forEach(x => x.classList.toggle('active', x === t)));
+});
+
+/* ── related templates ── */
+const REL = [
+  { name: 'Инвентарь и склад', desc: 'Склады, товары, движения, поставщики и заказы поставки', meta: '5 таблиц', updated: 'изменено вчера', layout: 'tree', published: false },
+  { name: 'CRM пайплайн', desc: 'Компании, контакты, сделки, этапы воронки и активности', meta: '7 таблиц', updated: 'изменено 3 дня назад', layout: 'star', published: true },
+  { name: 'Бронирование', desc: 'Ресурсы, слоты, брони и повторяющаяся доступность', meta: '4 таблицы', updated: 'изменено 6 дней назад', layout: 'row', published: false }
+];
+const LAYOUTS = {
+  triangle: { boxes: [{x:30,y:14},{x:120,y:14},{x:75,y:80}], edges: [[0,1],[0,2],[1,2]] },
+  row:      { boxes: [{x:14,y:46},{x:96,y:46},{x:178,y:46}], edges: [[0,1],[1,2]] },
+  diag:     { boxes: [{x:18,y:14},{x:90,y:54},{x:160,y:94}], edges: [[0,1],[1,2]] },
+  star:     { boxes: [{x:90,y:12},{x:18,y:68},{x:162,y:68},{x:90,y:108}], edges: [[0,1],[0,2],[1,3],[2,3]] },
+  tree:     { boxes: [{x:90,y:12},{x:30,y:70},{x:150,y:70}], edges: [[0,1],[0,2]] }
+};
+function tbox(t) { return `<div class="tbox" style="left:${t.x}px; top:${t.y}px"><div class="hh"></div><div class="ll"></div><div class="ll" style="width:18px"></div><div class="ll"></div></div>`; }
+function curves(layout) {
+  const def = LAYOUTS[layout];
+  const W = 60, H = 38;
+  const lines = def.edges.map(([a, b]) => {
+    const A = def.boxes[a], B = def.boxes[b];
+    const ax = A.x + W / 2, ay = A.y + H, bx = B.x + W / 2, by = B.y, my = (ay + by) / 2;
+    return `<path d="M${ax} ${ay} C ${ax} ${my}, ${bx} ${my}, ${bx} ${by}" stroke="#2a2a3e" stroke-width="1" fill="none"/><circle cx="${bx}" cy="${by}" r="1.6" fill="#06b6d4"/>`;
+  }).join('');
+  return `<svg class="curves" viewBox="0 0 240 140" preserveAspectRatio="none">${lines}</svg>`;
+}
+document.getElementById('relatedGrid').innerHTML = REL.map(t => `
+  <article class="tcard">
+    <div class="thumb">${LAYOUTS[t.layout].boxes.map(tbox).join('')}${curves(t.layout)}</div>
+    <div class="tbody">
+      <div class="title-row"><h3>${t.name}</h3><span class="cat-badge" style="${t.published ? 'color:var(--cyan); border-color:rgba(6,182,212,0.3); background:rgba(6,182,212,0.06)' : ''}">${t.published ? 'ОПУБЛИКОВАНО' : 'ПРИВАТНАЯ'}</span></div>
+      <p class="desc-2">${t.desc}</p>
+      <div class="footer-row">
+        <span class="author"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-table"/></svg>${t.meta}</span>
+        <span class="uses">${t.updated}</span>
+      </div>
+    </div>
+  </article>
+`).join('');
+
+/* ── toast helper ── */
+const toast = document.getElementById('toast');
+const toastText = document.getElementById('toastText');
+let toastTimer = null;
+function showToast(msg) {
+  toastText.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+}
+document.getElementById('shareBtn').addEventListener('click', () => showToast('Публичный read-only link скопирован'));
+document.getElementById('editBtn').addEventListener('click', () => showToast('Открываем в редакторе...'));
+document.getElementById('publishBtn').addEventListener('click', () => { document.getElementById('mdRoot').style.display = 'flex'; document.getElementById('mdForm').style.display = 'block'; document.getElementById('mdSuccess').style.display = 'none'; });
+
+/* ── modal ── */
+const mdRoot = document.getElementById('mdRoot');
+const mdForm = document.getElementById('mdForm');
+const mdSuccess = document.getElementById('mdSuccess');
+document.querySelectorAll('[data-mdclose]').forEach(b => b.addEventListener('click', () => { mdRoot.style.display = 'none'; }));
+mdRoot.addEventListener('click', e => { if (e.target === mdRoot) mdRoot.style.display = 'none'; });
+document.getElementById('ckTos').addEventListener('click', e => { e.currentTarget.classList.toggle('on'); });
+document.getElementById('publishConfirm').addEventListener('click', () => { mdForm.style.display = 'none'; mdSuccess.style.display = 'block'; });
+
+/* ── tweak panel ── */
+window.addEventListener('message', ev => {
+  const d = ev.data || {};
+  if (d.type === '__activate_edit_mode') showTweaks();
+  if (d.type === '__deactivate_edit_mode') hideTweaks();
+});
+window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+function showTweaks() {
+  if (document.getElementById('tweaks')) return;
+  const w = document.createElement('div');
+  w.id = 'tweaks';
+  w.style.cssText = 'position:fixed; right:24px; bottom:24px; width:240px; background:var(--elevated); border:1px solid var(--border-hover); border-radius:12px; padding:14px; z-index:400; box-shadow:0 16px 48px rgba(0,0,0,0.5); font-family:inherit;';
+  w.innerHTML = `
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+      <div style="font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted);">Tweaks</div>
+      <button id="twX" style="background:none; border:none; color:var(--muted); cursor:pointer; padding:2px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div style="font-size:11px; color:var(--text-2); margin-bottom:10px; line-height:1.5">Открыть модалку:</div>
+    <div style="display:flex; flex-direction:column; gap:6px;">
+      <button class="btn-sec" id="twForm" style="width:100%">Форма публикации</button>
+      <button class="btn-sec" id="twSuccess" style="width:100%">Успех</button>
+    </div>`;
+  document.body.appendChild(w);
+  document.getElementById('twX').onclick = () => { hideTweaks(); window.parent.postMessage({type:'__edit_mode_dismissed'}, '*'); };
+  document.getElementById('twForm').onclick = () => { mdForm.style.display='block'; mdSuccess.style.display='none'; mdRoot.style.display='flex'; };
+  document.getElementById('twSuccess').onclick = () => { mdForm.style.display='none'; mdSuccess.style.display='block'; mdRoot.style.display='flex'; };
+}
+function hideTweaks() { const w = document.getElementById('tweaks'); if (w) w.remove(); }
+
+/* ── node click → toggle selected & popover ── */
+const popUsers = document.getElementById('popUsers');
+document.querySelectorAll('.node').forEach(n => {
+  n.addEventListener('click', e => {
+    const wasSelected = n.classList.contains('selected');
+    document.querySelectorAll('.node').forEach(x => x.classList.remove('selected'));
+    popUsers.style.display = 'none';
+    if (!wasSelected) {
+      n.classList.add('selected');
+      // simple popover stub — only positioned for users node in this static mock
+      if (n.dataset.name === 'users') { popUsers.style.display = ''; }
+    }
+  });
+});
+</script>
+</body>
+</html>

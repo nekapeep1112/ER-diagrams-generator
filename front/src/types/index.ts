@@ -1,26 +1,15 @@
-// User types
 export interface User {
   id: number;
-  username: string;
   email: string;
+  username: string;
   avatar_url?: string;
+  plan?: 'free' | 'pro';
   groups?: string[];
   is_email_verified?: boolean;
+  bio?: string;
+  default_sql_dialect?: SqlDialect;
 }
 
-export interface RegisterData {
-  email: string;
-  username: string;
-  password: string;
-  password_confirm: string;
-}
-
-export interface LoginData {
-  email: string;
-  password: string;
-}
-
-// Column types for ER diagram
 export interface Column {
   name: string;
   type: string;
@@ -29,10 +18,10 @@ export interface Column {
   references: string | null;
 }
 
-// ER Node types
 export interface TableNodeData {
   tableName: string;
   columns: Column[];
+  notesCount?: number;
 }
 
 export interface ERNode {
@@ -42,7 +31,6 @@ export interface ERNode {
   data: TableNodeData;
 }
 
-// ER Edge types
 export interface EREdge {
   id: string;
   source: string;
@@ -54,44 +42,22 @@ export interface EREdge {
   label?: string;
 }
 
-// ER Data (from AI response)
 export interface ERData {
   nodes: ERNode[];
   edges: EREdge[];
 }
 
-// SQL Dialect types
-export type SqlDialect = 'PostgreSQL' | 'MySQL' | 'SQLite' | 'SQL Server' | 'Oracle';
-
-// Message types
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  er_data: ERData | null;
-  sql: string | null;
+  er_data?: ERData | null;
+  sql?: string | null;
   created_at: string;
+  error?: string;
 }
 
-// Chat types
 export interface Chat {
-  id: string;
-  title: string;
-  created_at: string;
-  updated_at: string;
-  message_count?: number;
-  messages?: Message[];
-}
-
-// API Response types
-export interface AuthResponse {
-  token: string;
-  user: User;
-  need_verification?: boolean;
-  message?: string;
-}
-
-export interface ChatListResponse {
   id: string;
   title: string;
   created_at: string;
@@ -99,58 +65,68 @@ export interface ChatListResponse {
   message_count: number;
 }
 
-export interface ChatDetailResponse {
-  id: string;
-  title: string;
-  created_at: string;
-  updated_at: string;
+export interface ChatDetail extends Chat {
   messages: Message[];
 }
 
-export interface SendMessageResponse {
-  user_message: Message;
-  assistant_message: Message;
-}
-
-// Tag types
 export interface Tag {
   id: string;
   name: string;
   color: string;
-  created_at: string;
 }
 
-// Saved Schema types
+export interface TableNote {
+  id: string;
+  table_name?: string;
+  type: 'info' | 'warning' | 'idea' | 'todo';
+  body: string;
+  created_at: string;
+  updated_at?: string;
+}
+
 export interface SavedSchema {
   id: string;
   name: string;
+  description?: string;
   er_data: ERData;
   sql: string;
+  sql_dialect: string;
   tags: Tag[];
+  is_published: boolean;
+  fork_count: number;
+  notes: TableNote[];
   created_at: string;
   updated_at: string;
 }
 
-// Store types
-export interface AppState {
-  user: User | null;
-  token: string | null;
-  chats: ChatListResponse[];
-  currentChat: ChatDetailResponse | null;
-  isLoading: boolean;
-  error: string | null;
-
-  // Actions
-  setUser: (user: User | null) => void;
-  setToken: (token: string | null) => void;
-  setChats: (chats: ChatListResponse[]) => void;
-  addChat: (chat: ChatListResponse) => void;
-  removeChat: (chatId: string) => void;
-  setCurrentChat: (chat: ChatDetailResponse | null) => void;
-  updateChatTitle: (chatId: string, title: string) => void;
-  addMessage: (message: Message) => void;
-  incrementMessageCount: (chatId: string, count?: number) => void;
-  setLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
-  logout: () => Promise<void>;
+export interface SchemaTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  er_data: ERData;
+  sql: string;
+  tags: Tag[];
+  author: User;
+  fork_count: number;
+  created_at: string;
+  sql_dialect?: string;
+  updated_at?: string;
+  notes?: TableNote[];
 }
+
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+export interface MessageCreateResponse {
+  user_message: Message;
+  assistant_message: Message;
+}
+
+export type SqlDialect = 'PostgreSQL' | 'MySQL' | 'SQLite' | 'SQL Server' | 'Oracle';
+
+export type DashboardTab = 'diagram' | 'sql' | 'notes';

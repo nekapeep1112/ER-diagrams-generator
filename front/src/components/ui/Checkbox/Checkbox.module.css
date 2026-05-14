@@ -1,0 +1,61 @@
+.row {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.nativeInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--input);
+  flex: 0 0 16px;
+  margin-top: 1px;
+  color: #fff;
+  transition: background-color 0.12s, border-color 0.12s;
+}
+
+.row:hover .box {
+  border-color: var(--border-hover);
+}
+
+.nativeInput:focus-visible + .box {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.25);
+}
+
+.nativeInput:checked + .box {
+  background: var(--cyan);
+  border-color: var(--cyan);
+}
+
+.label {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+
+.label a {
+  color: var(--cyan);
+}
+
+.label a:hover {
+  text-decoration: underline;
+}

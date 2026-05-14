@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Моя библиотека · ER Database</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0a0f; --surface: #12121a; --elevated: #1a1a26; --input: #0d0d14;
+    --border: #1e1e2e; --border-hover: #2a2a3e; --border-strong: #3a3a52;
+    --text: #fafafa; --text-2: #a1a1aa; --muted: #71717a; --disabled: #52525b;
+    --cyan: #06b6d4; --purple: #a855f7; --yellow: #facc15; --red: #f43f5e; --green: #4ade80;
+    --sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+  body { font-family: var(--sans); font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  h1, h2, h3, h4, p { margin: 0; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
+  .micro { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+  .mono { font-family: var(--mono); }
+
+  /* NAV */
+  .nav { position: sticky; top: 0; z-index: 50; width: 100%; background: rgba(18,18,26,0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text); font-size: 14px; font-weight: 500; letter-spacing: -0.2px; }
+  .brand-mark { width: 22px; height: 22px; flex: 0 0 22px; }
+  .nav-links { display: flex; align-items: center; gap: 28px; }
+  .nav-links a { color: var(--text-2); font-size: 13px; transition: color .15s; position: relative; padding: 4px 0; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active { color: var(--text); }
+  .nav-links a.active::after { content: ''; position: absolute; left: 0; right: 0; bottom: -19px; height: 1px; background: linear-gradient(90deg, var(--cyan), var(--purple)); }
+  .nav-right { display: flex; align-items: center; gap: 10px; position: relative; }
+  .nav-avatar { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 4px 10px 4px 4px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); cursor: pointer; transition: background-color .15s, border-color .15s; }
+  .nav-avatar:hover { background: var(--elevated); border-color: var(--border-hover); }
+  .av-init { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #5b6cff, #c850c0); color: var(--text); font-size: 11px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; font-family: var(--mono); }
+  .nav-avatar .chev { color: var(--muted); }
+  .av-pop { position: absolute; top: calc(100% + 8px); right: 0; width: 200px; background: var(--elevated); border: 1px solid var(--border-hover); border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); padding: 6px; display: none; z-index: 60; }
+  .av-pop.open { display: block; }
+  .av-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; font-size: 13px; color: var(--text-2); cursor: pointer; }
+  .av-item:hover { background: var(--surface); color: var(--text); }
+  .av-item.active { color: var(--cyan); }
+  .av-sep { height: 1px; background: var(--border); margin: 4px 6px; }
+
+  /* buttons */
+  .btn-primary { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; border-radius: 8px; background: linear-gradient(135deg, var(--cyan), var(--purple)); color: #0a0a0f; font-size: 13px; font-weight: 500; transition: filter .15s, box-shadow .15s; border: none; }
+  .btn-primary:hover { filter: brightness(1.1); box-shadow: 0 0 24px rgba(6,182,212,0.25); }
+  .btn-sec { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border-hover); color: var(--text); font-size: 13px; font-weight: 500; }
+  .btn-sec:hover { background: var(--elevated); border-color: var(--border-strong); }
+  .btn-gh { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 8px; color: var(--text-2); font-size: 13px; background: transparent; }
+  .btn-gh:hover { background: var(--surface); color: var(--text); }
+  .btn-sm, .btn-primary.sm, .btn-sec.sm, .btn-gh.sm { height: 32px; font-size: 12px; padding: 0 12px; }
+
+  svg.lucide { width: 16px; height: 16px; flex: 0 0 16px; stroke-width: 1.5; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.lucide-14 { width: 14px; height: 14px; flex: 0 0 14px; }
+  svg.lucide-12 { width: 12px; height: 12px; flex: 0 0 12px; }
+  svg.lucide-20 { width: 20px; height: 20px; flex: 0 0 20px; }
+
+  /* PAGE HEADER */
+  .page-header { padding: 48px 0 32px; position: relative; overflow: hidden; }
+  .page-header::before { content: ''; position: absolute; top: -160px; left: 50%; transform: translateX(-50%); width: 800px; height: 400px; background: radial-gradient(ellipse at center, rgba(6,182,212,0.05), transparent 70%); pointer-events: none; }
+  .page-header .micro { display: inline-block; margin-bottom: 18px; }
+  .page-header h1 { font-size: 40px; font-weight: 500; line-height: 1.05; letter-spacing: -0.8px; margin-bottom: 16px; max-width: 720px; }
+  .page-header .sub { font-size: 15px; color: var(--text-2); max-width: 600px; line-height: 1.6; }
+  .page-stats { margin-top: 22px; display: inline-flex; align-items: center; gap: 12px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .page-stats b { color: var(--text); font-weight: 500; }
+  .quota-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.25); color: var(--purple); font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* FILTERS */
+  .filters { padding: 14px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: rgba(10,10,15,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); position: sticky; top: 60px; z-index: 40; }
+  .filters-inner { display: grid; grid-template-columns: minmax(280px, 0.55fr) 1fr auto; gap: 14px; align-items: center; }
+  .search-box { position: relative; }
+  .search-box .icL { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+  .search-box input { width: 100%; height: 40px; background: var(--input); border: 1px solid var(--border); border-radius: 8px; padding: 0 38px; color: var(--text); font-family: var(--sans); font-size: 13px; transition: border-color .15s; }
+  .search-box input:focus { outline: none; border-color: var(--cyan); }
+  .search-box input::placeholder { color: var(--disabled); }
+  .search-box .clearBtn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); }
+  .search-box .clearBtn:hover { background: var(--surface); color: var(--text); }
+  .filter-spacer { min-width: 0; }
+  .filter-tail { display: flex; align-items: center; gap: 8px; }
+  .tag-btn, .sort-btn { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text-2); font-family: var(--mono); font-size: 11px; transition: border-color .12s, color .12s; }
+  .tag-btn:hover, .sort-btn:hover { border-color: var(--border-hover); color: var(--text); }
+  .view-mode { display: inline-flex; gap: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .view-mode button { width: 30px; height: 32px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); border-right: 1px solid var(--border); }
+  .view-mode button:last-child { border-right: none; }
+  .view-mode button.active { color: var(--cyan); background: rgba(6,182,212,0.08); }
+  .view-mode button:hover { color: var(--text); }
+  .view-mode button.active:hover { color: var(--cyan); }
+
+  /* tag popover */
+  .tag-pop { position: absolute; top: calc(100% + 8px); right: 0; width: 240px; background: var(--elevated); border: 1px solid var(--border-hover); border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); z-index: 60; display: none; }
+  .tag-pop.open { display: block; }
+  .tag-pop .pop-search { padding: 12px 12px 8px; border-bottom: 1px solid var(--border); }
+  .tag-pop .pop-search input { width: 100%; height: 30px; background: var(--input); border: 1px solid var(--border); border-radius: 6px; padding: 0 10px; color: var(--text); font-size: 12px; font-family: var(--sans); }
+  .tag-pop .pop-list { max-height: 220px; overflow-y: auto; padding: 6px 4px; }
+  .tag-row { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 6px; cursor: pointer; }
+  .tag-row:hover { background: var(--surface); }
+  .tag-row .cb { width: 14px; height: 14px; border: 1px solid var(--border-hover); border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 14px; }
+  .tag-row.sel .cb { background: var(--cyan); border-color: var(--cyan); color: #0a0a0f; }
+  .tag-row .tdot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 8px; }
+  .tag-row .tname { font-size: 12px; flex: 1; color: var(--text-2); }
+  .tag-row.sel .tname { color: var(--text); }
+  .tag-row .tcount { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .pop-actions { display: flex; justify-content: space-between; padding: 8px 10px; border-top: 1px solid var(--border); }
+
+  /* RESULTS META */
+  .results-meta { display: flex; align-items: center; gap: 10px; padding: 18px 0 14px; font-family: var(--mono); font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+  .results-meta b { color: var(--text); font-weight: 500; }
+  .active-filter { display: inline-flex; align-items: center; gap: 6px; padding: 0 4px 0 10px; height: 24px; border-radius: 999px; background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.3); color: var(--cyan); font-family: var(--mono); font-size: 10px; }
+  .active-filter .x { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: var(--cyan); }
+  .active-filter .x:hover { background: rgba(6,182,212,0.18); }
+
+  /* GRID */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; padding-bottom: 48px; }
+  .scard { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; transition: border-color .15s, transform .15s; position: relative; display: flex; flex-direction: column; }
+  .scard:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+  .scard .actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; opacity: 0; transition: opacity .15s; z-index: 3; }
+  .scard:hover .actions { opacity: 1; }
+  .ibtn { width: 28px; height: 28px; border-radius: 6px; background: rgba(18,18,26,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid var(--border); color: var(--text-2); display: inline-flex; align-items: center; justify-content: center; transition: color .12s, border-color .12s, background-color .12s; }
+  .ibtn:hover { color: var(--text); border-color: var(--border-hover); }
+  .ibtn.danger:hover { color: var(--red); border-color: rgba(244,63,94,0.4); }
+
+  /* thumbnail */
+  .thumb { height: 160px; position: relative; background: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0) 0 0/16px 16px, var(--bg); border-bottom: 1px solid var(--border); overflow: hidden; }
+  .thumb .tbox { position: absolute; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; width: 60px; overflow: hidden; }
+  .thumb .tbox .hh { height: 8px; background: linear-gradient(90deg, var(--cyan), var(--purple)); }
+  .thumb .tbox .ll { height: 3px; margin: 4px 5px; background: #2a2a3e; border-radius: 1px; }
+  .thumb svg.curves { position: absolute; inset: 0; pointer-events: none; }
+
+  /* body */
+  .sbody { padding: 14px 16px 16px; flex: 1; display: flex; flex-direction: column; }
+  .stitle { font-size: 15px; font-weight: 500; line-height: 1.3; letter-spacing: -0.2px; }
+  .sstats { margin-top: 6px; display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .sstats .sep { color: var(--disabled); }
+  .stags { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; min-height: 22px; }
+  .tag-pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border); font-family: var(--mono); font-size: 9px; color: var(--text-2); }
+  .tag-pill .pdot { width: 6px; height: 6px; border-radius: 50%; }
+  .sfooter { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--muted); gap: 8px; }
+  .pub-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.3); color: var(--cyan); font-family: var(--mono); font-size: 10px; }
+  .pub-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 6px rgba(6,182,212,0.6); }
+  .unpub-pill { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 999px; background: transparent; border: 1px solid var(--border); color: var(--muted); font-family: var(--mono); font-size: 10px; }
+
+  /* PAGINATION */
+  .pagination { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 8px 0 64px; flex-wrap: wrap; }
+  .page-info { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .page-nav { display: inline-flex; align-items: center; gap: 4px; }
+  .pbtn { width: 36px; height: 36px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-2); font-family: var(--mono); font-size: 12px; transition: background-color .12s, color .12s, border-color .12s; border: 1px solid transparent; }
+  .pbtn:hover:not(.disabled):not(.dots) { background: var(--surface); color: var(--text); }
+  .pbtn.active { background: rgba(6,182,212,0.1); color: var(--cyan); border-color: rgba(6,182,212,0.3); }
+  .pbtn.dots { cursor: default; color: var(--muted); }
+  .pbtn.disabled { color: var(--disabled); cursor: not-allowed; }
+
+  /* FOOTER */
+  footer { border-top: 1px solid var(--border); padding: 56px 0 36px; margin-top: 24px; }
+  .footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 56px; margin-bottom: 48px; }
+  .footer-col h4 { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin: 0 0 16px; }
+  .footer-col ul { list-style: none; padding: 0; margin: 0; }
+  .footer-col li { margin-bottom: 10px; }
+  .footer-col a { color: var(--text-2); font-size: 13px; }
+  .footer-col a:hover { color: var(--text); }
+  .footer-brand p { font-size: 12px; color: var(--muted); margin-top: 12px; max-width: 240px; line-height: 1.6; }
+  .footer-bot { padding-top: 24px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--muted); font-family: var(--mono); letter-spacing: 0.5px; }
+
+  @media (max-width: 1080px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .filters-inner { grid-template-columns: 1fr; gap: 10px; }
+    .filter-tail { justify-content: flex-end; flex-wrap: wrap; }
+  }
+  @media (max-width: 760px) {
+    .container { padding: 0 20px; }
+    .nav-links { display: none; }
+    .grid { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+    .page-header { padding: 32px 0 24px; }
+    .page-header h1 { font-size: 32px; }
+  }
+</style>
+</head>
+<body data-screen-label="Library">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><circle cx="7" cy="7" r="1.2" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-chev-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-arrow-down-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-database" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 11v6c0 1.7 4 3 9 3s9-1.3 9-3v-6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-chev-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-chev-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-library" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 0 1 2-2h10v18H6a2 2 0 0 1-2-2Z"/><path d="M16 3h4v18h-4"/></symbol>
+    <symbol id="i-credit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></symbol>
+  </defs>
+</svg>
+
+<!-- NAV -->
+<nav class="nav" data-screen-label="Nav">
+  <div class="container nav-inner">
+    <a class="brand" href="#">
+      <svg class="brand-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="brandGrad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#06b6d4"/>
+            <stop offset="1" stop-color="#a855f7"/>
+          </linearGradient>
+        </defs>
+        <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#brandGrad)" stroke-width="1.2"/>
+        <rect x="6" y="6" width="12" height="3" rx="1" fill="url(#brandGrad)"/>
+        <rect x="6" y="11" width="12" height="1" rx="0.5" fill="#a1a1aa"/>
+        <rect x="6" y="14" width="12" height="1" rx="0.5" fill="#a1a1aa"/>
+        <rect x="6" y="17" width="8" height="1" rx="0.5" fill="#a1a1aa"/>
+      </svg>
+      <span>ER Database</span>
+    </a>
+    <div class="nav-links">
+      <a href="Templates.html">Шаблоны</a>
+      <a href="#">Тарифы</a>
+      <a href="#">Документация</a>
+    </div>
+    <div class="nav-right">
+      <button class="nav-avatar" id="avBtn">
+        <span class="av-init">МК</span>
+        <span class="chev"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-chev-down"/></svg></span>
+      </button>
+      <div class="av-pop" id="avPop">
+        <div class="av-item"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-user"/></svg>Профиль</div>
+        <div class="av-item active"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-library"/></svg>Моя библиотека</div>
+        <div class="av-item"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-credit"/></svg>Тарифы</div>
+        <div class="av-sep"></div>
+        <div class="av-item"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-logout"/></svg>Выйти</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- PAGE HEADER -->
+<section class="page-header" data-screen-label="Header">
+  <div class="container">
+    <span class="micro">Библиотека · ваши схемы</span>
+    <h1>Мои схемы</h1>
+    <p class="sub">Все ваши сохранённые ER-диаграммы. Редактируйте, экспортируйте или публикуйте как шаблон для сообщества.</p>
+    <div class="page-stats">
+      <span><b>5 из 5</b> схем · 3/5 на бесплатном тарифе</span>
+      <span class="quota-pill">Лимит достигнут · Перейти на Pro →</span>
+    </div>
+  </div>
+</section>
+
+<!-- FILTERS -->
+<section class="filters" data-screen-label="Filters">
+  <div class="container filters-inner">
+    <div class="search-box">
+      <span class="icL"><svg class="lucide" viewBox="0 0 24 24"><use href="#i-search"/></svg></span>
+      <input id="search" type="text" placeholder="Поиск по моим схемам..." />
+      <button class="clearBtn" id="clearBtn" style="display:none" aria-label="Очистить"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="filter-spacer"></div>
+    <div class="filter-tail">
+      <div style="position:relative" id="tagBtnWrap">
+        <button class="tag-btn" id="tagBtn">
+          <svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-tag"/></svg>
+          <span>Теги</span>
+          <svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-chev-down"/></svg>
+        </button>
+        <div class="tag-pop" id="tagPop">
+          <div class="pop-search"><input type="text" placeholder="Поиск тегов..." /></div>
+          <div class="pop-list">
+            <label class="tag-row sel"><span class="cb"><svg class="lucide lucide-12" viewBox="0 0 24 24" style="stroke-width:3"><use href="#i-check"/></svg></span><span class="tdot" style="background:#06b6d4"></span><span class="tname">billing</span><span class="tcount">2</span></label>
+            <label class="tag-row"><span class="cb"></span><span class="tdot" style="background:#a855f7"></span><span class="tname">subscriptions</span><span class="tcount">1</span></label>
+            <label class="tag-row"><span class="cb"></span><span class="tdot" style="background:#facc15"></span><span class="tname">shop</span><span class="tcount">1</span></label>
+            <label class="tag-row"><span class="cb"></span><span class="tdot" style="background:#4ade80"></span><span class="tname">cart</span><span class="tcount">1</span></label>
+            <label class="tag-row"><span class="cb"></span><span class="tdot" style="background:#f43f5e"></span><span class="tname">orders</span><span class="tcount">1</span></label>
+            <label class="tag-row"><span class="cb"></span><span class="tdot" style="background:#06b6d4"></span><span class="tname">blog</span><span class="tcount">1</span></label>
+            <label class="tag-row"><span class="cb"></span><span class="tdot" style="background:#a855f7"></span><span class="tname">content</span><span class="tcount">1</span></label>
+            <label class="tag-row"><span class="cb"></span><span class="tdot" style="background:#facc15"></span><span class="tname">education</span><span class="tcount">1</span></label>
+            <label class="tag-row"><span class="cb"></span><span class="tdot" style="background:#4ade80"></span><span class="tname">crm</span><span class="tcount">1</span></label>
+          </div>
+          <div class="pop-actions">
+            <button class="btn-gh sm">Сбросить</button>
+            <button class="btn-primary sm">Применить</button>
+          </div>
+        </div>
+      </div>
+      <button class="sort-btn" id="sortBtn">
+        <svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-arrow-down-up"/></svg>
+        <span>Недавние</span>
+        <svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-chev-down"/></svg>
+      </button>
+      <div class="view-mode">
+        <button class="active" aria-label="Сетка"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-grid"/></svg></button>
+        <button aria-label="Список"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-list"/></svg></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- META + GRID -->
+<div class="container">
+  <div class="results-meta">
+    <span>Найдено <b>5</b> схем</span>
+    <span>·</span>
+    <span>фильтры:</span>
+    <span class="active-filter">billing<button class="x"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-x"/></svg></button></span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="pagination">
+    <span class="page-info">Показано 1–5 из 5</span>
+    <div class="page-nav">
+      <button class="pbtn disabled" aria-label="Назад"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-chev-left"/></svg></button>
+      <button class="pbtn active">1</button>
+      <button class="pbtn disabled" aria-label="Вперёд"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-chev-right"/></svg></button>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer data-screen-label="Footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="#">
+          <svg class="brand-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#brandGrad)" stroke-width="1.2"/>
+            <rect x="6" y="6" width="12" height="3" rx="1" fill="url(#brandGrad)"/>
+            <rect x="6" y="11" width="12" height="1" rx="0.5" fill="#a1a1aa"/>
+            <rect x="6" y="14" width="12" height="1" rx="0.5" fill="#a1a1aa"/>
+            <rect x="6" y="17" width="8" height="1" rx="0.5" fill="#a1a1aa"/>
+          </svg>
+          <span>ER Database</span>
+        </a>
+        <p>Проектирование БД на естественном языке. Нормализованные схемы, интерактивные ER-диаграммы и SQL под любую базу.</p>
+      </div>
+      <div class="footer-col"><h4>Продукт</h4><ul><li><a href="#">Возможности</a></li><li><a href="Templates.html">Шаблоны</a></li><li><a href="#">Тарифы</a></li><li><a href="#">Что нового</a></li></ul></div>
+      <div class="footer-col"><h4>Ресурсы</h4><ul><li><a href="#">Документация</a></li><li><a href="#">Гайды</a></li><li><a href="#">Справочник SQL</a></li><li><a href="#">Сообщество</a></li></ul></div>
+      <div class="footer-col"><h4>Правовое</h4><ul><li><a href="#">Условия</a></li><li><a href="#">Конфиденциальность</a></li><li><a href="#">Безопасность</a></li><li><a href="#">DPA</a></li></ul></div>
+    </div>
+    <div class="footer-bot">
+      <span>© 2025 ER Database. Собрано на Django + Next.js.</span>
+      <span>v1.4.0</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+const TAG_COLORS = {
+  billing: '#06b6d4', subscriptions: '#a855f7',
+  shop: '#facc15', cart: '#4ade80', orders: '#f43f5e',
+  blog: '#06b6d4', content: '#a855f7',
+  education: '#facc15', courses: '#4ade80',
+  crm: '#06b6d4', sales: '#a855f7'
+};
+
+const SCHEMAS = [
+  { name: 'Биллинг SaaS · подписки', tables: 5, edges: 4, dialect: 'PostgreSQL', tags: ['billing','subscriptions'], updated: 'обновлено 2 ч назад', pub: { forks: 47 }, layout: 'row' },
+  { name: 'Интернет-магазин с корзиной', tables: 7, edges: 8, dialect: 'PostgreSQL', tags: ['shop','cart','orders'], updated: 'обновлено вчера', layout: 'star' },
+  { name: 'Блог с тегами', tables: 4, edges: 3, dialect: 'MySQL', tags: ['blog','content'], updated: 'обновлено 3 дня назад', layout: 'tree' },
+  { name: 'Курсы и студенты', tables: 6, edges: 5, dialect: 'PostgreSQL', tags: ['education','courses'], updated: 'обновлено неделю назад', pub: { forks: 12 }, layout: 'diag' },
+  { name: 'CRM лиды', tables: 8, edges: 9, dialect: 'SQLite', tags: ['crm','sales'], updated: 'обновлено 2 недели назад', layout: 'triangle' }
+];
+
+const LAYOUTS = {
+  triangle: { boxes: [{x:30,y:18},{x:120,y:18},{x:75,y:90}], edges: [[0,1],[0,2],[1,2]] },
+  row:      { boxes: [{x:14,y:50},{x:96,y:50},{x:178,y:50}], edges: [[0,1],[1,2]] },
+  diag:     { boxes: [{x:18,y:18},{x:90,y:62},{x:160,y:106}], edges: [[0,1],[1,2]] },
+  star:     { boxes: [{x:90,y:14},{x:18,y:78},{x:162,y:78},{x:90,y:120}], edges: [[0,1],[0,2],[1,3],[2,3]] },
+  tree:     { boxes: [{x:90,y:14},{x:30,y:80},{x:150,y:80}], edges: [[0,1],[0,2]] }
+};
+
+function makeTbox(tb){ return `<div class="tbox" style="left:${tb.x}px; top:${tb.y}px"><div class="hh"></div><div class="ll"></div><div class="ll" style="width:18px"></div><div class="ll"></div></div>`; }
+function makeCurves(layout){
+  const def = LAYOUTS[layout]; const W=60, H=38;
+  return `<svg class="curves" viewBox="0 0 240 160" preserveAspectRatio="none">` + def.edges.map(([a,b])=>{
+    const A=def.boxes[a], B=def.boxes[b];
+    const ax=A.x+W/2, ay=A.y+H, bx=B.x+W/2, by=B.y;
+    const my=(ay+by)/2;
+    return `<path d="M${ax} ${ay} C ${ax} ${my}, ${bx} ${my}, ${bx} ${by}" stroke="#2a2a3e" stroke-width="1" fill="none"/><circle cx="${bx}" cy="${by}" r="1.6" fill="#06b6d4"/>`;
+  }).join('') + `</svg>`;
+}
+
+function makeCard(s){
+  const boxes = LAYOUTS[s.layout].boxes.map(makeTbox).join('');
+  const curves = makeCurves(s.layout);
+  const tags = s.tags.map(t => `<span class="tag-pill"><span class="pdot" style="background:${TAG_COLORS[t]||'#71717a'}"></span>${t}</span>`).join('');
+  const pub = s.pub
+    ? `<span class="pub-pill"><span class="dot"></span>Опубликовано · ${s.pub.forks} форков</span>`
+    : `<span class="unpub-pill">Не опубликовано</span>`;
+  return `
+    <article class="scard">
+      <div class="thumb">${boxes}${curves}</div>
+      <div class="actions">
+        <button class="ibtn" title="Редактировать"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-pencil"/></svg></button>
+        <button class="ibtn" title="Опубликовать как шаблон"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-share"/></svg></button>
+        <button class="ibtn danger" title="Удалить"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-trash"/></svg></button>
+      </div>
+      <div class="sbody">
+        <h3 class="stitle">${s.name}</h3>
+        <div class="sstats"><span>${s.tables} таблиц</span><span class="sep">·</span><span>${s.edges} связей</span><span class="sep">·</span><span>${s.dialect}</span></div>
+        <div class="stags">${tags}</div>
+        <div class="sfooter"><span>${s.updated}</span>${pub}</div>
+      </div>
+    </article>`;
+}
+document.getElementById('grid').innerHTML = SCHEMAS.map(makeCard).join('');
+
+/* search clear */
+const search = document.getElementById('search');
+const clearBtn = document.getElementById('clearBtn');
+search.addEventListener('input', () => { clearBtn.style.display = search.value ? 'inline-flex' : 'none'; });
+clearBtn.addEventListener('click', () => { search.value = ''; clearBtn.style.display = 'none'; search.focus(); });
+
+/* tag pop */
+const tagBtn = document.getElementById('tagBtn'), tagPop = document.getElementById('tagPop');
+tagBtn.addEventListener('click', e => { e.stopPropagation(); tagPop.classList.toggle('open'); });
+document.addEventListener('click', e => { if (!tagPop.contains(e.target) && e.target !== tagBtn) tagPop.classList.remove('open'); });
+tagPop.querySelectorAll('.tag-row').forEach(r => r.addEventListener('click', () => r.classList.toggle('sel')));
+
+/* avatar pop */
+const avBtn = document.getElementById('avBtn'), avPop = document.getElementById('avPop');
+avBtn.addEventListener('click', e => { e.stopPropagation(); avPop.classList.toggle('open'); });
+document.addEventListener('click', e => { if (!avPop.contains(e.target) && e.target !== avBtn && !avBtn.contains(e.target)) avPop.classList.remove('open'); });
+
+/* view mode */
+document.querySelectorAll('.view-mode button').forEach((b, _, list) => b.addEventListener('click', () => list.forEach(x => x.classList.toggle('active', x === b))));
+
+/* active-filter remove */
+document.querySelectorAll('.active-filter .x').forEach(x => x.addEventListener('click', e => e.target.closest('.active-filter').remove()));
+</script>
+</body>
+</html>

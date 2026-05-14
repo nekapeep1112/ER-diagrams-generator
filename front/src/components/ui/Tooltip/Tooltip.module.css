@@ -1,0 +1,23 @@
+.wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.tip {
+  position: absolute;
+  background: var(--elevated);
+  border: 1px solid var(--border-hover);
+  color: var(--text);
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  z-index: 60;
+  pointer-events: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.top    { bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); }
+.bottom { top: calc(100% + 8px); left: 50%; transform: translateX(-50%); }
+.left   { right: calc(100% + 8px); top: 50%; transform: translateY(-50%); }
+.right  { left: calc(100% + 8px); top: 50%; transform: translateY(-50%); }

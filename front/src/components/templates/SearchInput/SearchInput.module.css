@@ -1,0 +1,31 @@
+.wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.input {
+  padding-right: 38px;
+}
+
+.clear {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.12s, color 0.12s;
+}
+
+.clear:hover {
+  background: var(--surface);
+  color: var(--text);
+}

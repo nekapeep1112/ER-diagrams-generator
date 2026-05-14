@@ -1,0 +1,103 @@
+.shell {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 96px 32px 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.iconCircle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.iconCircleCyan {
+  background: rgba(6, 182, 212, 0.08);
+  border-color: rgba(6, 182, 212, 0.25);
+}
+
+.iconCircleGreen {
+  background: rgba(74, 222, 128, 0.08);
+  border-color: rgba(74, 222, 128, 0.25);
+}
+
+.iconCircleRed {
+  background: rgba(244, 63, 94, 0.08);
+  border-color: rgba(244, 63, 94, 0.25);
+}
+
+.iconCyan {
+  color: var(--cyan);
+}
+
+.iconGreen {
+  color: var(--green);
+}
+
+.iconRed {
+  color: var(--red);
+}
+
+.title {
+  font-size: 28px;
+  letter-spacing: -0.4px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.body {
+  color: var(--text-2);
+  font-size: 14px;
+  max-width: 360px;
+  margin: 0 auto 18px;
+}
+
+.email {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.hint {
+  margin-bottom: 24px;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.smallLink {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.smallLink:hover {
+  color: var(--text);
+}
+
+.fullBtn {
+  width: 100%;
+  max-width: 320px;
+}
+
+@media (max-width: 760px) {
+  .shell {
+    padding: 64px 20px 48px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+}

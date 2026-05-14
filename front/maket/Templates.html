@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Шаблоны · ER Database</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --elevated: #1a1a26;
+    --input: #0d0d14;
+    --border: #1e1e2e;
+    --border-hover: #2a2a3e;
+    --border-strong: #3a3a52;
+    --text: #fafafa;
+    --text-2: #a1a1aa;
+    --muted: #71717a;
+    --disabled: #52525b;
+    --cyan: #06b6d4;
+    --purple: #a855f7;
+    --yellow: #facc15;
+    --red: #f43f5e;
+    --green: #4ade80;
+    --sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+  body { font-family: var(--sans); font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  h1, h2, h3, h4, p { margin: 0; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
+  .micro { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+  .mono { font-family: var(--mono); }
+
+  /* ── NAV ─────────────────────────── */
+  .nav { position: sticky; top: 0; z-index: 50; width: 100%; background: rgba(18,18,26,0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text); font-size: 14px; font-weight: 500; letter-spacing: -0.2px; }
+  .brand-mark { width: 22px; height: 22px; flex: 0 0 22px; }
+  .nav-links { display: flex; align-items: center; gap: 28px; }
+  .nav-links a { color: var(--text-2); font-size: 13px; transition: color .15s; position: relative; padding: 4px 0; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active { color: var(--text); }
+  .nav-links a.active::after { content: ''; position: absolute; left: 0; right: 0; bottom: -19px; height: 1px; background: linear-gradient(90deg, var(--cyan), var(--purple)); }
+  .nav-right { display: flex; align-items: center; gap: 10px; }
+
+  /* buttons */
+  .btn-primary { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; border-radius: 8px; background: linear-gradient(135deg, var(--cyan), var(--purple)); color: #0a0a0f; font-size: 13px; font-weight: 500; transition: filter .15s, box-shadow .15s; }
+  .btn-primary:hover { filter: brightness(1.1); box-shadow: 0 0 24px rgba(6,182,212,0.25); }
+  .btn-sec { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border-hover); color: var(--text); font-size: 13px; font-weight: 500; transition: background-color .15s, border-color .15s; }
+  .btn-sec:hover { background: var(--elevated); border-color: var(--border-strong); }
+  .btn-gh { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 8px; color: var(--text-2); font-size: 13px; font-weight: 400; transition: background-color .15s, color .15s; background: transparent; }
+  .btn-gh:hover { background: var(--surface); color: var(--text); }
+  .btn-sm { height: 32px; font-size: 12px; padding: 0 12px; }
+  .btn-sec.sm, .btn-gh.sm, .btn-primary.sm { height: 32px; font-size: 12px; padding: 0 12px; }
+
+  svg.lucide { width: 16px; height: 16px; flex: 0 0 16px; stroke-width: 1.5; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  svg.lucide-14 { width: 14px; height: 14px; flex: 0 0 14px; }
+  svg.lucide-12 { width: 12px; height: 12px; flex: 0 0 12px; }
+  svg.lucide-20 { width: 20px; height: 20px; flex: 0 0 20px; }
+
+  /* ── AVATAR (auth) ─────────────── */
+  .nav-avatar { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 4px 10px 4px 4px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); transition: background-color .15s, border-color .15s; cursor: pointer; }
+  .nav-avatar:hover { background: var(--elevated); border-color: var(--border-hover); }
+  .av-init { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #5b6cff, #c850c0); color: var(--text); font-size: 11px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; font-family: var(--mono); }
+  .nav-avatar .chev { color: var(--muted); }
+
+  body[data-auth="anon"] .auth-only { display: none; }
+  body[data-auth="auth"] .anon-only { display: none; }
+  body[data-auth="anon"] .lib-badge { display: none; }
+
+  /* ── PAGE HEADER ─────────────────── */
+  .page-header { padding: 64px 0 48px; position: relative; overflow: hidden; }
+  .page-header::before { content: ''; position: absolute; top: -160px; left: 50%; transform: translateX(-50%); width: 800px; height: 400px; background: radial-gradient(ellipse at center, rgba(6,182,212,0.05), transparent 70%); pointer-events: none; }
+  .page-header .micro { display: inline-block; margin-bottom: 18px; }
+  .page-header h1 { font-size: 48px; font-weight: 500; line-height: 1.05; letter-spacing: -0.96px; margin-bottom: 18px; max-width: 720px; }
+  .page-header .sub { font-size: 16px; color: var(--text-2); max-width: 640px; line-height: 1.6; }
+  .page-stats { margin-top: 24px; font-family: var(--mono); font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 10px; }
+  .page-stats .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px rgba(74,222,128,0.5); }
+
+  /* ── FILTERS BAR ─────────────────── */
+  .filters { padding: 14px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: rgba(10,10,15,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); position: sticky; top: 60px; z-index: 40; }
+  .filters-inner { display: grid; grid-template-columns: minmax(260px, 0.7fr) 1fr auto; gap: 14px; align-items: center; }
+
+  .search-box { position: relative; }
+  .search-box .icL { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+  .search-box input { width: 100%; height: 40px; background: var(--input); border: 1px solid var(--border); border-radius: 8px; padding: 0 38px 0 38px; color: var(--text); font-family: var(--sans); font-size: 13px; transition: border-color .15s; }
+  .search-box input:focus { outline: none; border-color: var(--cyan); }
+  .search-box input::placeholder { color: var(--disabled); }
+  .search-box .clearBtn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); transition: background-color .12s, color .12s; }
+  .search-box .clearBtn:hover { background: var(--surface); color: var(--text); }
+
+  .cat-row { position: relative; min-width: 0; }
+  .cat-scroll { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 4px 32px 4px 0; }
+  .cat-scroll::-webkit-scrollbar { display: none; }
+  .cat-row::after { content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 36px; background: linear-gradient(to right, transparent, var(--bg)); pointer-events: none; }
+  .chip { flex: 0 0 auto; font-family: var(--mono); font-size: 11px; height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-2); background: transparent; transition: border-color .12s, color .12s, background-color .12s; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+  .chip:hover { border-color: var(--border-hover); color: var(--text); }
+  .chip.active { background: rgba(6,182,212,0.1); border-color: rgba(6,182,212,0.3); color: var(--cyan); }
+  .chip .count { color: var(--muted); }
+  .chip.active .count { color: var(--cyan); opacity: 0.8; }
+
+  .filter-tail { display: flex; align-items: center; gap: 6px; }
+  .tag-btn, .sort-btn { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text-2); font-family: var(--mono); font-size: 11px; transition: border-color .12s, color .12s; }
+  .tag-btn:hover, .sort-btn:hover { border-color: var(--border-hover); color: var(--text); }
+  .active-tags { display: inline-flex; gap: 6px; margin-right: 4px; }
+  .active-tag { display: inline-flex; align-items: center; gap: 6px; padding: 0 4px 0 10px; height: 26px; border-radius: 999px; background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.3); color: var(--cyan); font-family: var(--mono); font-size: 10px; }
+  .active-tag .x { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: var(--cyan); }
+  .active-tag .x:hover { background: rgba(6,182,212,0.18); }
+
+  /* tag popover */
+  .tag-pop { position: absolute; top: calc(100% + 8px); right: 0; width: 240px; background: var(--elevated); border: 1px solid var(--border-hover); border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); z-index: 60; display: none; }
+  .tag-pop.open { display: block; }
+  .tag-pop .pop-search { padding: 12px 12px 8px; border-bottom: 1px solid var(--border); }
+  .tag-pop .pop-search input { width: 100%; height: 30px; background: var(--input); border: 1px solid var(--border); border-radius: 6px; padding: 0 10px; color: var(--text); font-size: 12px; font-family: var(--sans); }
+  .tag-pop .pop-search input:focus { outline: none; border-color: var(--cyan); }
+  .tag-pop .pop-list { max-height: 260px; overflow-y: auto; padding: 6px 4px; }
+  .tag-pop .pop-list::-webkit-scrollbar { width: 6px; }
+  .tag-pop .pop-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+  .tag-row { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 6px; cursor: pointer; }
+  .tag-row:hover { background: var(--surface); }
+  .tag-row .cb { width: 14px; height: 14px; border: 1px solid var(--border-hover); border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 14px; }
+  .tag-row.sel .cb { background: var(--cyan); border-color: var(--cyan); color: #0a0a0f; }
+  .tag-row .tdot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 8px; }
+  .tag-row .tname { font-size: 12px; flex: 1; color: var(--text-2); }
+  .tag-row.sel .tname { color: var(--text); }
+  .tag-row .tcount { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .pop-actions { display: flex; justify-content: space-between; padding: 8px 10px; border-top: 1px solid var(--border); }
+
+  /* ── RESULTS META ─────────────── */
+  .results-meta { display: flex; align-items: center; justify-content: space-between; padding: 18px 0 14px; }
+  .results-meta .left { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .results-meta .left b { color: var(--text); font-weight: 500; }
+  .view-mode { display: inline-flex; gap: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .view-mode button { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); border-right: 1px solid var(--border); }
+  .view-mode button:last-child { border-right: none; }
+  .view-mode button.active { color: var(--cyan); background: rgba(6,182,212,0.08); }
+  .view-mode button:hover { color: var(--text); }
+  .view-mode button.active:hover { color: var(--cyan); }
+
+  /* ── TEMPLATES GRID ─────────────── */
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; padding-bottom: 48px; }
+  .tcard { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; transition: border-color .15s, transform .15s; position: relative; display: flex; flex-direction: column; }
+  .tcard:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+  .tcard.in-library { border-color: rgba(6,182,212,0.2); }
+  .tcard .bookmark { position: absolute; top: 12px; right: 12px; width: 28px; height: 28px; border-radius: 6px; background: rgba(18,18,26,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid var(--border); color: var(--text-2); display: inline-flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .15s, color .12s, border-color .12s; z-index: 3; }
+  .tcard:hover .bookmark { opacity: 1; }
+  .tcard .bookmark:hover { color: var(--text); border-color: var(--border-hover); }
+  .lib-badge { position: absolute; top: 12px; left: 12px; padding: 3px 8px; border-radius: 999px; background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.3); color: var(--cyan); font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 4px; z-index: 3; }
+  .lib-badge svg { width: 9px; height: 9px; stroke-width: 2; }
+
+  /* tooltip */
+  .tooltip { position: absolute; right: 0; top: calc(100% + 6px); background: var(--elevated); border: 1px solid var(--border-hover); padding: 5px 9px; border-radius: 4px; font-family: var(--mono); font-size: 10px; color: var(--text-2); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .12s; }
+  .bookmark:hover .tooltip { opacity: 1; }
+
+  /* thumbnail */
+  .thumb { height: 160px; position: relative; background: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0) 0 0/16px 16px, var(--bg); border-bottom: 1px solid var(--border); overflow: hidden; }
+  .thumb .tbox { position: absolute; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; width: 60px; overflow: hidden; }
+  .thumb .tbox .hh { height: 8px; background: linear-gradient(90deg, var(--cyan), var(--purple)); }
+  .thumb .tbox .ll { height: 3px; margin: 4px 5px; background: #2a2a3e; border-radius: 1px; }
+  .thumb svg.curves { position: absolute; inset: 0; pointer-events: none; }
+
+  /* body */
+  .tbody { padding: 14px 16px 16px; flex: 1; display: flex; flex-direction: column; }
+  .title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .title-row h3 { font-size: 15px; font-weight: 500; line-height: 1.3; letter-spacing: -0.2px; }
+  .cat-badge { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-2); padding: 3px 8px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 999px; white-space: nowrap; flex: 0 0 auto; }
+  .desc { font-size: 13px; color: var(--text-2); line-height: 1.5; margin-top: 8px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 39px; }
+  .tags-row { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag-pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border); font-family: var(--mono); font-size: 9px; color: var(--text-2); }
+  .tag-pill .pdot { width: 6px; height: 6px; border-radius: 50%; }
+  .tag-pill.more { color: var(--muted); }
+  .footer-row { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .author { display: inline-flex; align-items: center; gap: 6px; }
+  .author .av { width: 16px; height: 16px; border-radius: 50%; background: linear-gradient(135deg, #5b6cff, #c850c0); color: #0a0a0f; font-size: 8px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; font-family: var(--mono); }
+  .uses { display: inline-flex; align-items: center; gap: 5px; }
+
+  /* ── PAGINATION ─────────────── */
+  .pagination { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 8px 0 64px; flex-wrap: wrap; }
+  .page-info { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .page-nav { display: inline-flex; align-items: center; gap: 4px; }
+  .pbtn { width: 36px; height: 36px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-2); font-family: var(--mono); font-size: 12px; transition: background-color .12s, color .12s, border-color .12s; border: 1px solid transparent; }
+  .pbtn:hover:not(.disabled):not(.dots) { background: var(--surface); color: var(--text); }
+  .pbtn.active { background: rgba(6,182,212,0.1); color: var(--cyan); border-color: rgba(6,182,212,0.3); }
+  .pbtn.dots { cursor: default; color: var(--muted); }
+  .pbtn.disabled { color: var(--disabled); cursor: not-allowed; }
+
+  /* ── EMPTY STATE ─────────────── */
+  .empty-state { display: none; padding: 96px 0; text-align: center; flex-direction: column; align-items: center; gap: 16px; }
+  .empty-state.show { display: flex; }
+  .empty-state .ic { color: var(--muted); }
+  .empty-state h3 { font-size: 18px; font-weight: 500; }
+  .empty-state p { color: var(--text-2); max-width: 360px; line-height: 1.6; font-size: 14px; }
+
+  /* ── FOOTER ─────────────── */
+  footer { border-top: 1px solid var(--border); padding: 56px 0 36px; margin-top: 24px; }
+  .footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 56px; margin-bottom: 48px; }
+  .footer-col h4 { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin: 0 0 16px; }
+  .footer-col ul { list-style: none; padding: 0; margin: 0; }
+  .footer-col li { margin-bottom: 10px; }
+  .footer-col a { color: var(--text-2); font-size: 13px; }
+  .footer-col a:hover { color: var(--text); }
+  .footer-brand p { font-size: 12px; color: var(--muted); margin-top: 12px; max-width: 240px; line-height: 1.6; }
+  .footer-bot { padding-top: 24px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--muted); font-family: var(--mono); letter-spacing: 0.5px; gap: 12px; }
+
+  /* responsive */
+  @media (max-width: 1080px) {
+    .grid { grid-template-columns: repeat(3, 1fr); }
+    .filters-inner { grid-template-columns: 1fr; gap: 10px; }
+    .filter-tail { justify-content: flex-end; }
+  }
+  @media (max-width: 760px) {
+    .container { padding: 0 20px; }
+    .nav-links { display: none; }
+    .grid { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+    .page-header { padding: 40px 0 32px; }
+    .page-header h1 { font-size: 36px; }
+    .filters { top: 60px; }
+  }
+</style>
+</head>
+<body data-auth="anon" data-screen-label="Templates">
+
+<!-- ── icon sprites ───────────────── -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><circle cx="7" cy="7" r="1.2" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-chev-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-arrow-down-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16Z"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-chev-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-chev-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-search-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m13.5 8.5-5 5"/><path d="m8.5 8.5 5 5"/><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3"/><path d="M12 18v3"/><path d="M3 12h3"/><path d="M18 12h3"/></symbol>
+  </defs>
+</svg>
+
+<!-- ── NAV ───────────────── -->
+<nav class="nav" data-screen-label="Nav">
+  <div class="container nav-inner">
+    <a class="brand" href="#">
+      <svg class="brand-mark" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="brandGrad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#06b6d4"/>
+            <stop offset="1" stop-color="#a855f7"/>
+          </linearGradient>
+        </defs>
+        <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#brandGrad)" stroke-width="1.2"/>
+        <rect x="6" y="6" width="12" height="3" rx="1" fill="url(#brandGrad)"/>
+        <rect x="6" y="11" width="12" height="1" rx="0.5" fill="#a1a1aa"/>
+        <rect x="6" y="14" width="12" height="1" rx="0.5" fill="#a1a1aa"/>
+        <rect x="6" y="17" width="8" height="1" rx="0.5" fill="#a1a1aa"/>
+      </svg>
+      <span>ER Database</span>
+    </a>
+    <div class="nav-links">
+      <a href="#" class="active">Шаблоны</a>
+      <a href="#">Тарифы</a>
+      <a href="#">Документация</a>
+    </div>
+    <div class="nav-right">
+      <span class="anon-only" style="display:inline-flex; gap:10px;">
+        <button class="btn-gh sm">Войти</button>
+        <button class="btn-primary sm">Регистрация</button>
+      </span>
+      <button class="nav-avatar auth-only">
+        <span class="av-init">МК</span>
+        <span class="chev"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-chev-down"/></svg></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- ── PAGE HEADER ───────────────── -->
+<section class="page-header" data-screen-label="Header">
+  <div class="container">
+    <span class="micro">Шаблоны · сообщество</span>
+    <h1>Готовые схемы баз данных</h1>
+    <p class="sub">Форкайте проверенные шаблоны от сообщества или начните свой и опубликуйте — пусть им пользуются другие.</p>
+    <div class="page-stats">
+      <span class="dot"></span>
+      <span>247 шаблонов · 12 категорий · обновлено 2 часа назад</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── FILTERS ───────────────── -->
+<section class="filters" data-screen-label="Filters">
+  <div class="container filters-inner">
+    <div class="search-box">
+      <span class="icL"><svg class="lucide" viewBox="0 0 24 24"><use href="#i-search"/></svg></span>
+      <input id="search" type="text" placeholder="Поиск шаблонов..." />
+      <button class="clearBtn" id="clearBtn" style="display:none" aria-label="Очистить"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="cat-row">
+      <div class="cat-scroll" id="catScroll">
+        <button class="chip active" data-cat="all">Все <span class="count">(247)</span></button>
+        <button class="chip" data-cat="ecom">E-commerce <span class="count">(42)</span></button>
+        <button class="chip" data-cat="saas">SaaS <span class="count">(38)</span></button>
+        <button class="chip" data-cat="cms">Блог/CMS <span class="count">(31)</span></button>
+        <button class="chip" data-cat="edu">Образование <span class="count">(28)</span></button>
+        <button class="chip" data-cat="fin">Финансы <span class="count">(24)</span></button>
+        <button class="chip" data-cat="soc">Социальные <span class="count">(19)</span></button>
+        <button class="chip" data-cat="ana">Аналитика <span class="count">(16)</span></button>
+        <button class="chip" data-cat="iot">IoT <span class="count">(12)</span></button>
+        <button class="chip" data-cat="med">Здоровье <span class="count">(8)</span></button>
+        <button class="chip" data-cat="oth">Другое <span class="count">(29)</span></button>
+      </div>
+    </div>
+    <div class="filter-tail">
+      <span class="active-tags">
+        <span class="active-tag">auth<button class="x"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-x"/></svg></button></span>
+        <span class="active-tag">payments<button class="x"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-x"/></svg></button></span>
+      </span>
+      <div style="position:relative" id="tagBtnWrap">
+        <button class="tag-btn" id="tagBtn">
+          <svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-tag"/></svg>
+          <span>Теги</span>
+          <svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-chev-down"/></svg>
+        </button>
+        <div class="tag-pop" id="tagPop">
+          <div class="pop-search">
+            <input type="text" placeholder="Поиск тегов..." />
+          </div>
+          <div class="pop-list">
+            <label class="tag-row sel"><span class="cb"><svg class="lucide lucide-12" viewBox="0 0 24 24" style="stroke-width:3"><use href="#i-check"/></svg></span><span class="tdot" style="background:#06b6d4"></span><span class="tname">auth</span><span class="tcount">42</span></label>
+            <label class="tag-row sel"><span class="cb"><svg class="lucide lucide-12" viewBox="0 0 24 24" style="stroke-width:3"><use href="#i-check"/></svg></span><span class="tdot" style="background:#facc15"></span><span class="tname">payments</span><span class="tcount">28</span></label>
+            <label class="tag-row"><span class="cb"></span><span class="tdot" style="background:#a855f7"></span><span class="tname">cart</span><span class="tcount">31</span></label>
+            <label class="tag-row"><span class="cb"></span><span class="tdot" style="background:#4ade80"></span><span class="tname">subscriptions</span><span class="tcount">19</span></label>
+            <label class="tag-row"><span class="cb"></span><span class="tdot" style="background:#f43f5e"></span><span class="tname">content</span><span class="tcount">24</span></label>
+            <label class="tag-row"><span class="cb"></span><span class="tdot" style="background:#06b6d4"></span><span class="tname">social</span><span class="tcount">18</span></label>
+            <label class="tag-row"><span class="cb"></span><span class="tdot" style="background:#a855f7"></span><span class="tname">analytics</span><span class="tcount">14</span></label>
+            <label class="tag-row"><span class="cb"></span><span class="tdot" style="background:#facc15"></span><span class="tname">inventory</span><span class="tcount">11</span></label>
+            <label class="tag-row"><span class="cb"></span><span class="tdot" style="background:#4ade80"></span><span class="tname">crm</span><span class="tcount">9</span></label>
+          </div>
+          <div class="pop-actions">
+            <button class="btn-gh sm">Сбросить</button>
+            <button class="btn-primary sm">Применить</button>
+          </div>
+        </div>
+      </div>
+      <button class="sort-btn" id="sortBtn">
+        <svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-arrow-down-up"/></svg>
+        <span>Популярные</span>
+        <svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-chev-down"/></svg>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ── RESULTS META ───────────────── -->
+<div class="container">
+  <div class="results-meta">
+    <div class="left">Найдено <b>47</b> шаблонов · фильтры: <b>auth</b>, <b>payments</b></div>
+    <div class="view-mode">
+      <button class="active" aria-label="Сетка"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-grid"/></svg></button>
+      <button aria-label="Список"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-list"/></svg></button>
+    </div>
+  </div>
+
+  <!-- ── GRID ─────────── -->
+  <div class="grid" id="grid"></div>
+
+  <div class="empty-state" id="empty">
+    <svg class="lucide" viewBox="0 0 24 24" width="40" height="40" style="stroke-width:1.2"><use href="#i-search-x"/></svg>
+    <h3>Ничего не нашлось</h3>
+    <p>Попробуйте изменить поисковый запрос или сбросить фильтры.</p>
+    <button class="btn-primary sm" style="margin-top:4px">Сбросить фильтры</button>
+  </div>
+
+  <!-- ── PAGINATION ─────────── -->
+  <div class="pagination">
+    <span class="page-info">Показано 1–16 из 247</span>
+    <div class="page-nav">
+      <button class="pbtn disabled" aria-label="Назад"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-chev-left"/></svg></button>
+      <button class="pbtn active">1</button>
+      <button class="pbtn">2</button>
+      <button class="pbtn">3</button>
+      <button class="pbtn">4</button>
+      <button class="pbtn dots">…</button>
+      <button class="pbtn">15</button>
+      <button class="pbtn" aria-label="Вперёд"><svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-chev-right"/></svg></button>
+    </div>
+  </div>
+</div>
+
+<!-- ── FOOTER ───────────────── -->
+<footer data-screen-label="Footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="#">
+          <svg class="brand-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#brandGrad)" stroke-width="1.2"/>
+            <rect x="6" y="6" width="12" height="3" rx="1" fill="url(#brandGrad)"/>
+            <rect x="6" y="11" width="12" height="1" rx="0.5" fill="#a1a1aa"/>
+            <rect x="6" y="14" width="12" height="1" rx="0.5" fill="#a1a1aa"/>
+            <rect x="6" y="17" width="8" height="1" rx="0.5" fill="#a1a1aa"/>
+          </svg>
+          <span>ER Database</span>
+        </a>
+        <p>Проектирование БД на естественном языке. Нормализованные схемы, интерактивные ER-диаграммы и SQL под любую базу.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Продукт</h4>
+        <ul>
+          <li><a href="#">Возможности</a></li>
+          <li><a href="#">Шаблоны</a></li>
+          <li><a href="#">Тарифы</a></li>
+          <li><a href="#">Что нового</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Ресурсы</h4>
+        <ul>
+          <li><a href="#">Документация</a></li>
+          <li><a href="#">Гайды</a></li>
+          <li><a href="#">Справочник SQL</a></li>
+          <li><a href="#">Сообщество</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Правовое</h4>
+        <ul>
+          <li><a href="#">Условия</a></li>
+          <li><a href="#">Конфиденциальность</a></li>
+          <li><a href="#">Безопасность</a></li>
+          <li><a href="#">DPA</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bot">
+      <span>© 2025 ER Database. Собрано на Django + Next.js.</span>
+      <span>v1.4.0</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ── TWEAKS PANEL HOST ──────────── -->
+<div id="tweaks-root"></div>
+
+<script>
+/* ────────── TEMPLATE CARDS ────────── */
+const TAG_COLORS = {
+  retail: '#facc15', cart: '#a855f7', payments: '#facc15',
+  billing: '#06b6d4', subscriptions: '#4ade80',
+  content: '#f43f5e', comments: '#a855f7', tags: '#06b6d4',
+  social: '#06b6d4', feed: '#a855f7', follows: '#4ade80',
+  education: '#4ade80', courses: '#06b6d4', students: '#facc15',
+  pos: '#facc15', orders: '#a855f7', staff: '#06b6d4',
+  healthcare: '#f43f5e', patients: '#4ade80', appointments: '#06b6d4',
+  events: '#a855f7', metrics: '#facc15', users: '#06b6d4',
+  forum: '#06b6d4', threads: '#a855f7', karma: '#facc15',
+  inventory: '#facc15', stock: '#4ade80', suppliers: '#a855f7',
+  booking: '#06b6d4', calendar: '#a855f7', resources: '#4ade80',
+  crm: '#facc15', leads: '#06b6d4', deals: '#a855f7',
+  property: '#4ade80', listings: '#06b6d4', agents: '#a855f7',
+  iot: '#06b6d4', timeseries: '#a855f7', devices: '#facc15',
+  music: '#a855f7', playlists: '#06b6d4', artists: '#facc15',
+  tasks: '#06b6d4', projects: '#a855f7', kanban: '#4ade80'
+};
+
+const TEMPLATES = [
+  { name: 'E-commerce store',     cat: 'Retail',     tags: ['retail','cart','payments','auth'], desc: 'Multi-vendor marketplace with cart, orders, and Stripe integration', author: 'alex.dev',  init: 'AD', initBg: 'linear-gradient(135deg,#5b6cff,#c850c0)', forks: '1,284', layout: 'triangle' },
+  { name: 'SaaS billing',         cat: 'SaaS',       tags: ['billing','subscriptions'],         desc: 'Workspaces, subscriptions, invoices, line items with usage tracking',     author: 'maria.r',   init: 'MR', initBg: 'linear-gradient(135deg,#ff6b6b,#feca57)', forks: '947',   layout: 'row',      inLib: true },
+  { name: 'Blog with comments',   cat: 'CMS',        tags: ['content','comments','tags'],       desc: 'Posts, categories, tags, threaded comments и user roles',                  author: 'dev_anon',  init: 'DA', initBg: 'linear-gradient(135deg,#06b6d4,#22d3ee)', forks: '892',   layout: 'diag' },
+  { name: 'Twitter clone',        cat: 'Social',     tags: ['social','feed','follows','auth'], desc: 'Users, follows, tweets, likes, retweets и threaded replies',               author: 'tweet.dev', init: 'TD', initBg: 'linear-gradient(135deg,#a855f7,#ec4899)', forks: '612',   layout: 'star' },
+  { name: 'School LMS',           cat: 'Education',  tags: ['education','courses','students'], desc: 'Courses, students, enrollments, assignments и grading',                    author: 'anna.k',    init: 'AK', initBg: 'linear-gradient(135deg,#4ade80,#06b6d4)', forks: '521',   layout: 'tree' },
+  { name: 'Restaurant POS',       cat: 'Finance',    tags: ['pos','orders','staff','payments'],desc: 'Tables, menu items, orders, payments и смен-tracking',                     author: 'chef_db',   init: 'CD', initBg: 'linear-gradient(135deg,#facc15,#fb923c)', forks: '458',   layout: 'row' },
+  { name: 'Hospital admin',       cat: 'Healthcare', tags: ['healthcare','patients','appointments'], desc: 'Patients, doctors, appointments, prescriptions и billing',          author: 'med_pro',   init: 'MP', initBg: 'linear-gradient(135deg,#f43f5e,#ec4899)', forks: '387',   layout: 'triangle' },
+  { name: 'Analytics dashboard',  cat: 'Analytics',  tags: ['events','metrics','users'],        desc: 'Event tracking schema с time-series partitioning',                         author: 'data.eng',  init: 'DE', initBg: 'linear-gradient(135deg,#06b6d4,#a855f7)', forks: '342',   layout: 'diag',     inLib: true },
+  { name: 'Forum',                cat: 'Social',     tags: ['forum','threads','karma'],         desc: 'Boards, threads, posts, votes и moderator actions',                        author: 'gopher',    init: 'GP', initBg: 'linear-gradient(135deg,#22d3ee,#4ade80)', forks: '298',   layout: 'tree' },
+  { name: 'Inventory mgmt',       cat: 'Retail',     tags: ['inventory','stock','suppliers'],  desc: 'Products, warehouses, stock levels, supplier orders',                      author: 'warehouse', init: 'WH', initBg: 'linear-gradient(135deg,#fb923c,#facc15)', forks: '276',   layout: 'row' },
+  { name: 'Booking system',       cat: 'SaaS',       tags: ['booking','calendar','resources'], desc: 'Resources, time slots, bookings, recurring availability',                  author: 'book.dev',  init: 'BD', initBg: 'linear-gradient(135deg,#a855f7,#06b6d4)', forks: '254',   layout: 'star' },
+  { name: 'CRM leads',            cat: 'SaaS',       tags: ['crm','leads','deals'],             desc: 'Companies, contacts, leads, deals, pipeline stages',                       author: 'sales.pro', init: 'SP', initBg: 'linear-gradient(135deg,#ec4899,#facc15)', forks: '231',   layout: 'tree' },
+  { name: 'Real estate',          cat: 'Finance',    tags: ['property','listings','agents'],    desc: 'Properties, listings, agents, transactions и client matching',             author: 'realtor',   init: 'RT', initBg: 'linear-gradient(135deg,#4ade80,#facc15)', forks: '198',   layout: 'diag' },
+  { name: 'IoT sensors',          cat: 'IoT',        tags: ['iot','timeseries','devices'],      desc: 'Devices, readings, alerts, locations с time-series данными',               author: 'iot_lab',   init: 'IL', initBg: 'linear-gradient(135deg,#06b6d4,#3b82f6)', forks: '187',   layout: 'star' },
+  { name: 'Music streaming',      cat: 'Other',      tags: ['music','playlists','artists'],     desc: 'Artists, albums, tracks, playlists, плейлогами и like-events',             author: 'audio.dev', init: 'AU', initBg: 'linear-gradient(135deg,#a855f7,#f43f5e)', forks: '165',   layout: 'triangle' },
+  { name: 'Project tracker',      cat: 'SaaS',       tags: ['tasks','projects','kanban'],       desc: 'Projects, tasks, assignees, comments, attachments, statuses',              author: 'pm.tool',   init: 'PT', initBg: 'linear-gradient(135deg,#facc15,#a855f7)', forks: '142',   layout: 'row' }
+];
+
+/* layout variations for thumbnails */
+const LAYOUTS = {
+  triangle: { boxes: [{x:30,y:18},{x:120,y:18},{x:75,y:90}], edges: [[0,1],[0,2],[1,2]] },
+  row:      { boxes: [{x:14,y:50},{x:96,y:50},{x:178,y:50}], edges: [[0,1],[1,2]] },
+  diag:     { boxes: [{x:18,y:18},{x:90,y:62},{x:160,y:106}], edges: [[0,1],[1,2]] },
+  star:     { boxes: [{x:90,y:14},{x:18,y:78},{x:162,y:78},{x:90,y:120}], edges: [[0,1],[0,2],[1,3],[2,3]] },
+  tree:     { boxes: [{x:90,y:14},{x:30,y:80},{x:150,y:80}], edges: [[0,1],[0,2]] }
+};
+
+function makeTbox(tb) {
+  return `<div class="tbox" style="left:${tb.x}px; top:${tb.y}px"><div class="hh"></div><div class="ll"></div><div class="ll" style="width:18px"></div><div class="ll"></div></div>`;
+}
+
+function makeCurves(layout) {
+  const def = LAYOUTS[layout];
+  const TBOX_W = 60, TBOX_H = 38;
+  const lines = def.edges.map(([a, b]) => {
+    const A = def.boxes[a], B = def.boxes[b];
+    const ax = A.x + TBOX_W / 2, ay = A.y + TBOX_H;
+    const bx = B.x + TBOX_W / 2, by = B.y;
+    const my = (ay + by) / 2;
+    return `<path d="M${ax} ${ay} C ${ax} ${my}, ${bx} ${my}, ${bx} ${by}" stroke="#2a2a3e" stroke-width="1" fill="none"/><circle cx="${bx}" cy="${by}" r="1.6" fill="#06b6d4"/>`;
+  }).join('');
+  return `<svg class="curves" viewBox="0 0 240 160" preserveAspectRatio="none">${lines}</svg>`;
+}
+
+function makeCard(t, idx) {
+  const boxes = LAYOUTS[t.layout].boxes.map(makeTbox).join('');
+  const curves = makeCurves(t.layout);
+  const visTags = t.tags.slice(0, 3);
+  const restCount = t.tags.length - visTags.length;
+  const tagPills = visTags.map(name => `<span class="tag-pill"><span class="pdot" style="background:${TAG_COLORS[name] || '#71717a'}"></span>${name}</span>`).join('')
+    + (restCount > 0 ? `<span class="tag-pill more">+${restCount}</span>` : '');
+  const libBadgeClass = t.inLib ? 'in-library' : '';
+  const libBadge = t.inLib ? `<span class="lib-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6 9 17l-5-5"/></svg>В библиотеке</span>` : '';
+  const cat = t.cat.toUpperCase();
+  return `
+    <article class="tcard ${libBadgeClass}" data-cat="${cat}">
+      <div class="thumb">${boxes}${curves}</div>
+      ${libBadge}
+      <button class="bookmark" aria-label="Сохранить">
+        <svg class="lucide lucide-14" viewBox="0 0 24 24"><use href="#i-bookmark"/></svg>
+        <span class="tooltip anon-only">Войти, чтобы сохранить</span>
+      </button>
+      <div class="tbody">
+        <div class="title-row">
+          <h3>${t.name}</h3>
+          <span class="cat-badge">${cat}</span>
+        </div>
+        <p class="desc">${t.desc}</p>
+        <div class="tags-row">${tagPills}</div>
+        <div class="footer-row">
+          <span class="author"><span class="av" style="background:${t.initBg}">${t.init}</span><span>by ${t.author}</span></span>
+          <span class="uses"><svg class="lucide lucide-12" viewBox="0 0 24 24"><use href="#i-users"/></svg>${t.forks}</span>
+        </div>
+      </div>
+    </article>`;
+}
+
+document.getElementById('grid').innerHTML = TEMPLATES.map(makeCard).join('');
+
+/* ── search clear button ── */
+const search = document.getElementById('search');
+const clearBtn = document.getElementById('clearBtn');
+search.addEventListener('input', () => {
+  clearBtn.style.display = search.value ? 'inline-flex' : 'none';
+});
+clearBtn.addEventListener('click', () => { search.value = ''; clearBtn.style.display = 'none'; search.focus(); });
+
+/* ── category chips ── */
+document.getElementById('catScroll').addEventListener('click', e => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  document.querySelectorAll('.cat-scroll .chip').forEach(c => c.classList.toggle('active', c === btn));
+});
+
+/* ── tag popover ── */
+const tagBtn = document.getElementById('tagBtn');
+const tagPop = document.getElementById('tagPop');
+tagBtn.addEventListener('click', e => { e.stopPropagation(); tagPop.classList.toggle('open'); });
+document.addEventListener('click', e => {
+  if (!tagPop.contains(e.target) && e.target !== tagBtn) tagPop.classList.remove('open');
+});
+tagPop.querySelectorAll('.tag-row').forEach(r => r.addEventListener('click', () => r.classList.toggle('sel')));
+
+/* ── view-mode toggle ── */
+document.querySelectorAll('.view-mode button').forEach((b, _, list) => {
+  b.addEventListener('click', () => list.forEach(x => x.classList.toggle('active', x === b)));
+});
+
+/* ── active-tag remove ── */
+document.querySelectorAll('.active-tag .x').forEach(x => x.addEventListener('click', e => {
+  e.target.closest('.active-tag').remove();
+}));
+
+/* ── TWEAKS panel ── */
+(function () {
+  const DEFAULTS = /*EDITMODE-BEGIN*/{
+    "auth": "anon"
+  }/*EDITMODE-END*/;
+  let state = { ...DEFAULTS };
+  let panel = null;
+
+  function applyState() {
+    document.body.setAttribute('data-auth', state.auth);
+  }
+
+  function build() {
+    panel = document.createElement('div');
+    panel.id = 'tweaks-panel';
+    panel.style.cssText = 'position:fixed; bottom:20px; right:20px; width:240px; background:#1a1a26; border:1px solid #2a2a3e; border-radius:12px; padding:14px 16px 16px; font-family:Inter,system-ui,sans-serif; color:#fafafa; box-shadow:0 12px 40px rgba(0,0,0,0.5); z-index:1000;';
+    panel.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:1.5px; color:#71717a;">Tweaks</div>
+        <button id="tw-close" style="background:none; border:none; color:#71717a; cursor:pointer; padding:0; font-size:14px;">✕</button>
+      </div>
+      <div style="font-size:11px; color:#a1a1aa; margin-bottom:8px;">Состояние пользователя</div>
+      <div style="display:flex; gap:4px; padding:3px; background:#0d0d14; border:1px solid #1e1e2e; border-radius:8px;">
+        <button data-auth="anon" class="tw-seg" style="flex:1; height:28px; border-radius:6px; border:none; cursor:pointer; font-family:inherit; font-size:12px;">Anon</button>
+        <button data-auth="auth" class="tw-seg" style="flex:1; height:28px; border-radius:6px; border:none; cursor:pointer; font-family:inherit; font-size:12px;">Auth</button>
+      </div>
+    `;
+    document.body.appendChild(panel);
+    refreshSeg();
+    panel.querySelectorAll('.tw-seg').forEach(b => b.addEventListener('click', () => {
+      state.auth = b.dataset.auth;
+      applyState();
+      refreshSeg();
+      try { window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { auth: state.auth } }, '*'); } catch (e) {}
+    }));
+    document.getElementById('tw-close').addEventListener('click', hide);
+  }
+
+  function refreshSeg() {
+    if (!panel) return;
+    panel.querySelectorAll('.tw-seg').forEach(b => {
+      const active = b.dataset.auth === state.auth;
+      b.style.background = active ? 'linear-gradient(135deg,#06b6d4,#a855f7)' : 'transparent';
+      b.style.color = active ? '#0a0a0f' : '#a1a1aa';
+      b.style.fontWeight = active ? '500' : '400';
+    });
+  }
+
+  function show() {
+    if (!panel) build();
+    panel.style.display = 'block';
+  }
+  function hide() {
+    if (panel) panel.style.display = 'none';
+    try { window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*'); } catch (e) {}
+  }
+
+  window.addEventListener('message', e => {
+    const d = e.data || {};
+    if (d.type === '__activate_edit_mode') show();
+    else if (d.type === '__deactivate_edit_mode') hide();
+  });
+  try { window.parent.postMessage({ type: '__edit_mode_available' }, '*'); } catch (e) {}
+
+  applyState();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+.wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+}
+
+.menu {
+  position: absolute;
+  min-width: 200px;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+}
+
+.menu.down { top: calc(100% + 6px); }
+.menu.up { bottom: calc(100% + 6px); }
+.menu.right { right: 0; }
+.menu.left { left: 0; }

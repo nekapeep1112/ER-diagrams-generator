@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
-from .models import Chat, Message, SavedSchema, Tag
+from .models import Chat, Message, SavedSchema, SchemaTemplate, Tag, TableNote
 
 User = get_user_model()
 
@@ -49,6 +49,20 @@ class UserProfileUpdateSerializer(serializers.Serializer):
         choices=['PostgreSQL', 'MySQL', 'SQLite', 'SQL Server', 'Oracle'],
         required=False
     )
+
+
+class UserMiniSerializer(serializers.ModelSerializer):
+    """Совместим с TS-интерфейсом User: {id, email, username, avatar_url, plan}."""
+
+    plan = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'username', 'avatar_url', 'plan']
+
+    @extend_schema_field(str)
+    def get_plan(self, obj) -> str:
+        return 'pro' if obj.groups.filter(name='pro_user').exists() else 'free'
 
 
 # --- Chat serializers ---
@@ -117,10 +131,41 @@ class MessageCreateSerializer(serializers.Serializer):
 # --- Tag serializers ---
 
 class TagSerializer(serializers.ModelSerializer):
+    """Полный сериализатор для управления тегами пользователя."""
+
     class Meta:
         model = Tag
         fields = ['id', 'name', 'color', 'created_at']
         read_only_fields = ['id', 'created_at']
+
+
+class TemplateTagSerializer(serializers.ModelSerializer):
+    """Минимальный сериализатор тегов для вложений в схемы/шаблоны.
+    Совместим с TS-интерфейсом Tag: {id, name, color}.
+    """
+
+    class Meta:
+        model = Tag
+        fields = ['id', 'name', 'color']
+
+
+# --- TableNote serializers ---
+
+class TableNoteSerializer(serializers.ModelSerializer):
+    """Совместим с TS TableNote: {id, type, table_name?, body, created_at}."""
+
+    class Meta:
+        model = TableNote
+        fields = ['id', 'type', 'table_name', 'body', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class TableNoteCreateSerializer(serializers.ModelSerializer):
+    """Создание/частичное обновление заметки."""
+
+    class Meta:
+        model = TableNote
+        fields = ['type', 'table_name', 'body']
 
 
 # --- SavedSchema serializers ---
@@ -128,12 +173,21 @@ class TagSerializer(serializers.ModelSerializer):
 class SavedSchemaSerializer(serializers.ModelSerializer):
     """Сериализатор для сохранённых схем."""
 
-    tags = TagSerializer(many=True, read_only=True)
+    tags = TemplateTagSerializer(many=True, read_only=True)
+    notes = serializers.SerializerMethodField()
 
     class Meta:
         model = SavedSchema
-        fields = ['id', 'name', 'er_data', 'sql', 'tags', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        fields = [
+            'id', 'name', 'description', 'er_data', 'sql', 'sql_dialect',
+            'tags', 'is_published', 'fork_count', 'notes',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'is_published', 'fork_count', 'created_at', 'updated_at']
+
+    @extend_schema_field(TableNoteSerializer(many=True))
+    def get_notes(self, obj):
+        return TableNoteSerializer(obj.notes.all(), many=True).data
 
 
 class SavedSchemaCreateSerializer(serializers.ModelSerializer):
@@ -145,4 +199,48 @@ class SavedSchemaCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SavedSchema
-        fields = ['name', 'er_data', 'sql', 'tag_ids']
+        fields = ['name', 'description', 'er_data', 'sql', 'sql_dialect', 'tag_ids']
+
+
+# --- SchemaTemplate serializers ---
+
+class TemplateListSerializer(serializers.ModelSerializer):
+    """Сериализатор для списка шаблонов (карточки на /templates)."""
+
+    author = UserMiniSerializer(read_only=True)
+    tags = TemplateTagSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = SchemaTemplate
+        fields = [
+            'id', 'name', 'description', 'category', 'er_data', 'sql',
+            'tags', 'author', 'fork_count', 'created_at',
+        ]
+
+
+class TemplateDetailSerializer(serializers.ModelSerializer):
+    """Полный сериализатор шаблона со всеми заметками."""
+
+    author = UserMiniSerializer(read_only=True)
+    tags = TemplateTagSerializer(many=True, read_only=True)
+    notes = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SchemaTemplate
+        fields = [
+            'id', 'name', 'description', 'category', 'er_data', 'sql',
+            'sql_dialect', 'tags', 'author', 'fork_count',
+            'created_at', 'updated_at', 'notes',
+        ]
+
+    @extend_schema_field(TableNoteSerializer(many=True))
+    def get_notes(self, obj):
+        return TableNoteSerializer(obj.notes.all(), many=True).data
+
+
+class SchemaPublishSerializer(serializers.Serializer):
+    """Запрос на публикацию SavedSchema → SchemaTemplate."""
+
+    name = serializers.CharField(max_length=200, required=False)
+    description = serializers.CharField(required=False, allow_blank=True)
+    category = serializers.ChoiceField(choices=SchemaTemplate.CATEGORY_CHOICES)
