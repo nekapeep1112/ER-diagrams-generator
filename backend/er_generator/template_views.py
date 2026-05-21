@@ -123,6 +123,11 @@ class TemplateForkView(APIView):
 
         SchemaTemplate.objects.filter(id=template.id).update(fork_count=F('fork_count') + 1)
         _bump_version(_schemas_version_key(request.user.id))
+        # У автора шаблона в его библиотечном списке fork_count считывается
+        # из связанного SchemaTemplate — нужно сбросить кэш списка автора,
+        # иначе он будет видеть устаревший счётчик.
+        if template.author_id and template.author_id != request.user.id:
+            _bump_version(_schemas_version_key(template.author_id))
 
         return Response(SavedSchemaSerializer(new_schema).data, status=status.HTTP_201_CREATED)
 

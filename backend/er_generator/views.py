@@ -1,3 +1,4 @@
+import json
 import time
 from django.core.cache import cache
 from django.db.models import Q
@@ -98,6 +99,17 @@ class ChatListView(APIView):
 
         title = serializer.validated_data.get('title', 'Новый чат')
         chat = Chat.objects.create(user=request.user, title=title)
+
+        seed = serializer.validated_data.get('seed_message')
+        if seed:
+            Message.objects.create(
+                chat=chat,
+                role='assistant',
+                content=seed.get('content', ''),
+                er_data=seed.get('er_data'),
+                sql=seed.get('sql') or None,
+            )
+
         _bump_version(_chats_version_key(request.user.id))
         return Response(ChatDetailSerializer(chat).data, status=status.HTTP_201_CREATED)
 
@@ -174,10 +186,24 @@ class MessageView(APIView):
             content=serializer.validated_data['content']
         )
 
-        chat_history = [
-            {"role": msg.role, "content": msg.content}
-            for msg in chat.messages.all()
-        ]
+        # Для assistant-сообщений с er_data/sql собираем content обратно
+        # в тот JSON-формат, который модель сама и отдавала ({message, er_data, sql}).
+        # Иначе модель видит только натуральный текст и теряет схему — особенно
+        # критично для seed-сообщения форка, где content это просто заглушка.
+        chat_history = []
+        for msg in chat.messages.all():
+            if msg.role == 'assistant' and (msg.er_data or msg.sql):
+                content = json.dumps(
+                    {
+                        'message': msg.content,
+                        'er_data': msg.er_data,
+                        'sql': msg.sql,
+                    },
+                    ensure_ascii=False,
+                )
+            else:
+                content = msg.content
+            chat_history.append({'role': msg.role, 'content': content})
 
         try:
             result = generate_er_model(chat_history, sql_dialect=sql_dialect)
@@ -189,6 +215,11 @@ class MessageView(APIView):
                 er_data=result['er_data'],
                 sql=result['sql']
             )
+
+            # auto_now на Chat.updated_at срабатывает только при .save() самого
+            # чата — создание Message родителя не трогает. Бампим явно, чтобы
+            # сортировка по -updated_at двигала чат наверх после нового сообщения.
+            chat.save(update_fields=['updated_at'])
 
             _bump_version(_chats_version_key(request.user.id))
 
@@ -273,7 +304,12 @@ class SavedSchemaListView(APIView):
         data = cache.get(cache_key)
 
         if data is None:
-            qs = SavedSchema.objects.filter(user=request.user).prefetch_related('tags')
+            qs = (
+                SavedSchema.objects
+                .filter(user=request.user)
+                .select_related('published_template')
+                .prefetch_related('tags')
+            )
             if search:
                 qs = qs.filter(Q(name__icontains=search) | Q(sql__icontains=search))
             if tags_param:
@@ -328,7 +364,11 @@ class SavedSchemaDetailView(APIView):
             schema.save(update_fields=['name'])
         if 'tag_ids' in request.data:
             tag_ids = request.data.get('tag_ids') or []
-            valid_tags = Tag.objects.filter(user=request.user, id__in=tag_ids)
+            # Принимаем как личные теги пользователя, так и системные (user=None).
+            valid_tags = Tag.objects.filter(
+                Q(user=request.user) | Q(user__isnull=True),
+                id__in=tag_ids,
+            )
             schema.tags.set(valid_tags)
         _bump_version(_schemas_version_key(request.user.id))
         fresh = SavedSchema.objects.prefetch_related('tags').get(id=schema.id)

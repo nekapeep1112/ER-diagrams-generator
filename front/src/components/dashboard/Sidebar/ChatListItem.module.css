@@ -93,3 +93,34 @@
   border-color: rgba(6, 182, 212, 0.3);
   color: var(--cyan);
 }
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+}
+
+.menuItem:hover,
+.menuItem:focus-visible {
+  background: var(--surface);
+  outline: none;
+}
+
+.menuItemDanger {
+  color: var(--danger, #f87171);
+}
+
+.menuItemDanger:hover,
+.menuItemDanger:focus-visible {
+  background: rgba(248, 113, 113, 0.1);
+}

@@ -40,14 +40,6 @@ interface PublishModalProps {
   onUnpublished: () => void;
 }
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9а-я]+/giu, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 48) || 'schema';
-}
-
 export function PublishModal({
   open,
   onClose,
@@ -108,8 +100,15 @@ export function PublishModal({
     }
   }
 
+  function removeTag(tagId: string) {
+    setTagIds((prev) => prev.filter((id) => id !== tagId));
+  }
+
+  const activeTags: Tag[] = schema.tags.filter((t) => tagIds.includes(t.id));
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const link = `${origin}/library/${schema.id}`;
+
   function handleCopyLink() {
-    const link = `er-database.app/templates/${slugify(name)}`;
     try {
       void navigator.clipboard.writeText(link);
       toast.success('Ссылка скопирована');
@@ -117,13 +116,6 @@ export function PublishModal({
       toast.error('Не удалось скопировать ссылку');
     }
   }
-
-  function removeTag(tagId: string) {
-    setTagIds((prev) => prev.filter((id) => id !== tagId));
-  }
-
-  const activeTags: Tag[] = schema.tags.filter((t) => tagIds.includes(t.id));
-  const link = `er-database.app/templates/${slugify(name)}`;
 
   // ── HEADERS / BODIES / FOOTERS ──────────────────────────────
 

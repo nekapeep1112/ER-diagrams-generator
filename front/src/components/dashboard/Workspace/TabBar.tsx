@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Dropdown } from '@/components/ui/Dropdown';
 import { Icon } from '@/components/ui/Icon';
@@ -23,6 +24,8 @@ interface TabBarProps {
   sql: string;
   onSave?: () => void;
   saving?: boolean;
+  onExportPng?: () => Promise<void> | void;
+  canExportPng?: boolean;
 }
 
 export function TabBar({
@@ -35,6 +38,8 @@ export function TabBar({
   sql,
   onSave,
   saving,
+  onExportPng,
+  canExportPng,
 }: TabBarProps) {
   return (
     <div className={styles.tabBar}>
@@ -51,7 +56,13 @@ export function TabBar({
 
       <div className={styles.actions}>
         {activeTab === 'diagram' && (
-          <DiagramActions hasUnsavedChanges={hasUnsavedChanges} onSave={onSave} saving={saving} />
+          <DiagramActions
+            hasUnsavedChanges={hasUnsavedChanges}
+            onSave={onSave}
+            saving={saving}
+            onExportPng={onExportPng}
+            canExportPng={canExportPng}
+          />
         )}
         {activeTab === 'sql' && (
           <SqlActions dialect={dialect} onDialectChange={onDialectChange} sql={sql} />
@@ -66,11 +77,17 @@ function DiagramActions({
   hasUnsavedChanges,
   onSave,
   saving,
+  onExportPng,
+  canExportPng,
 }: {
   hasUnsavedChanges: boolean;
   onSave?: () => void;
   saving?: boolean;
+  onExportPng?: () => Promise<void> | void;
+  canExportPng?: boolean;
 }) {
+  const [exporting, setExporting] = useState(false);
+
   const handleSave = () => {
     if (!onSave) {
       toast.info('Сохранение появится позже');
@@ -78,6 +95,28 @@ function DiagramActions({
     }
     onSave();
   };
+
+  const handleExport = async () => {
+    if (!onExportPng || exporting) return;
+    setExporting(true);
+    try {
+      await onExportPng();
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportBtn = canExportPng ? (
+    <Button
+      variant="ghost-sm"
+      icon="image"
+      loading={exporting}
+      disabled={exporting}
+      onClick={handleExport}
+    >
+      Экспорт PNG
+    </Button>
+  ) : null;
 
   if (hasUnsavedChanges) {
     return (
@@ -92,30 +131,11 @@ function DiagramActions({
         >
           Сохранить
         </Button>
-        <Button
-          variant="ghost-sm"
-          icon="image"
-          onClick={() => toast.info('Экспорт PNG появится позже')}
-        >
-          Экспорт PNG
-        </Button>
+        {exportBtn}
       </>
     );
   }
-  return (
-    <>
-      <Button variant="ghost-sm" icon="check">
-        Сохранено
-      </Button>
-      <Button
-        variant="ghost-sm"
-        icon="image"
-        onClick={() => toast.info('Экспорт PNG появится позже')}
-      >
-        Экспорт PNG
-      </Button>
-    </>
-  );
+  return <>{exportBtn}</>;
 }
 
 function SqlActions({

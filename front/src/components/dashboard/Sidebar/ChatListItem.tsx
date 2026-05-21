@@ -142,7 +142,7 @@ export function ChatListItem({
                 type="button"
                 role="menuitem"
                 onClick={startRename}
-                style={menuItemStyle}
+                className={styles.menuItem}
               >
                 <Icon name="pencil" size={14} />
                 <span>Переименовать</span>
@@ -151,7 +151,7 @@ export function ChatListItem({
                 type="button"
                 role="menuitem"
                 onClick={handleDelete}
-                style={{ ...menuItemStyle, color: 'var(--danger, #f87171)' }}
+                className={`${styles.menuItem} ${styles.menuItemDanger}`}
               >
                 <Icon name="trash" size={14} />
                 <span>Удалить</span>
@@ -164,16 +164,3 @@ export function ChatListItem({
   );
 }
 
-const menuItemStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-  width: '100%',
-  padding: '8px 14px',
-  background: 'transparent',
-  border: 'none',
-  cursor: 'pointer',
-  color: 'inherit',
-  font: 'inherit',
-  textAlign: 'left',
-};

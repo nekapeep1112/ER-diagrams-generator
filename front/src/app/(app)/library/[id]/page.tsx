@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { notFound, useRouter } from 'next/navigation';
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useMemo, useRef, useState } from 'react';
 import { AppNav } from '@/components/layout/AppNav';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/Button';
@@ -11,17 +11,27 @@ import { Pill } from '@/components/ui/Pill';
 import { Tabs } from '@/components/ui/Tabs';
 import { TagPill } from '@/components/ui/TagPill';
 import { ReadonlyERCanvas } from '@/components/er-diagram/ReadonlyERCanvas';
+import type { ExportPngFn } from '@/lib/exportDiagramPng';
 import { NoteCard } from '@/components/notes/NoteCard';
 import { PublishModal } from '@/components/library/PublishModal';
+import { TagPicker } from '@/components/library/TagPicker';
+import { NoteEditor } from '@/components/library/NoteEditor';
 import { relativeTime } from '@/lib/relativeTime';
 import { highlightSqlLine } from '@/lib/sql-highlight';
 import { toast } from '@/store/toastStore';
 import { useAuthStore } from '@/store/authStore';
-import { fetchSchema, deleteSchema, exportSql } from '@/lib/api/schemas';
-import { fetchNotes } from '@/lib/api/notes';
+import { fetchSchema, deleteSchema, exportSql, updateSchema } from '@/lib/api/schemas';
+import {
+  fetchNotes,
+  createNote,
+  updateNote,
+  deleteNote,
+  type CreateNotePayload,
+} from '@/lib/api/notes';
+import { fetchTags, createTag } from '@/lib/api/tags';
 import { isPro } from '@/lib/user-helpers';
 import { getErrorMessage, getStatus } from '@/lib/error';
-import type { SavedSchema, TableNote } from '@/types';
+import type { SavedSchema, Tag, TableNote } from '@/types';
 import styles from './page.module.css';
 
 type TabValue = 'diagram' | 'sql' | 'notes';
@@ -107,6 +117,117 @@ function LibraryDetailView({
   const [isPublishedLocal, setIsPublishedLocal] = useState(schema.is_published);
   const [forkCountLocal, setForkCountLocal] = useState(schema.fork_count);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const exportPngRef = useRef<ExportPngFn | null>(null);
+
+  // Теги схемы (локально, оптимистично) + полный список доступных
+  // тегов пользователя+системных.
+  const [tagsLocal, setTagsLocal] = useState<Tag[]>(schema.tags);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchTags()
+      .then((tags) => {
+        if (!cancelled) setAllTags(tags);
+      })
+      .catch(() => {
+        // Молча — пикер просто будет пустым, юзер сможет создать новый.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function persistTagIds(nextIds: string[]) {
+    try {
+      await updateSchema(schema.id, { tag_ids: nextIds });
+    } catch (err) {
+      // Откатываем оптимистичное состояние при ошибке
+      setTagsLocal(schema.tags);
+      toast.error(getErrorMessage(err));
+    }
+  }
+
+  async function handleToggleTag(tagId: string) {
+    const wasSelected = tagsLocal.some((t) => t.id === tagId);
+    let next: Tag[];
+    if (wasSelected) {
+      next = tagsLocal.filter((t) => t.id !== tagId);
+    } else {
+      const tag = allTags.find((t) => t.id === tagId);
+      if (!tag) return;
+      next = [...tagsLocal, tag];
+    }
+    setTagsLocal(next);
+    await persistTagIds(next.map((t) => t.id));
+  }
+
+  async function handleCreateTag(name: string): Promise<Tag | null> {
+    try {
+      const tag = await createTag(name);
+      setAllTags((prev) => (prev.some((t) => t.id === tag.id) ? prev : [...prev, tag]));
+      // Сразу добавляем созданный тег в схему
+      if (!tagsLocal.some((t) => t.id === tag.id)) {
+        const next = [...tagsLocal, tag];
+        setTagsLocal(next);
+        await persistTagIds(next.map((t) => t.id));
+      }
+      return tag;
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+      return null;
+    }
+  }
+
+  // Заметки: модалка create/edit, обработчики удаления
+  const [noteEditorOpen, setNoteEditorOpen] = useState(false);
+  const [editingNote, setEditingNote] = useState<TableNote | null>(null);
+
+  const schemaTableNames = useMemo(
+    () => schema.er_data.nodes.map((n) => n.data.tableName),
+    [schema.er_data.nodes],
+  );
+
+  function openCreateNote() {
+    setEditingNote(null);
+    setNoteEditorOpen(true);
+  }
+
+  function openEditNote(note: TableNote) {
+    setEditingNote(note);
+    setNoteEditorOpen(true);
+  }
+
+  async function handleSubmitNote(payload: CreateNotePayload) {
+    try {
+      if (editingNote) {
+        const updated = await updateNote(editingNote.id, payload);
+        setNotes(notes.map((n) => (n.id === updated.id ? updated : n)));
+        toast.success('Заметка обновлена');
+      } else {
+        const created = await createNote(schema.id, payload);
+        setNotes([created, ...notes]);
+        toast.success('Заметка добавлена');
+      }
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+      throw err;
+    }
+  }
+
+  async function handleDeleteNote(note: TableNote) {
+    // Оптимистично — UI остаётся отзывчивым
+    const prev = notes;
+    setNotes(notes.filter((n) => n.id !== note.id));
+    try {
+      await deleteNote(note.id);
+      toast.success('Заметка удалена');
+    } catch (err) {
+      setNotes(prev);
+      toast.error(getErrorMessage(err));
+    }
+  }
 
   const dialect = schema.sql_dialect || 'PostgreSQL';
   const tables = schema.er_data.nodes.length;
@@ -160,6 +281,36 @@ function LibraryDetailView({
     } catch (err) {
       setDeleting(false);
       toast.error(getErrorMessage(err));
+    }
+  }
+
+  async function handleExportPng() {
+    if (exporting) return;
+    if (schema.er_data.nodes.length === 0) {
+      toast.info('Схема пустая — нечего экспортировать');
+      return;
+    }
+    setExporting(true);
+    try {
+      // Канвас рендерится только на вкладке "Диаграмма" — переключаем
+      // и ждём пару кадров, чтобы ref успел прицепиться.
+      if (tab !== 'diagram') {
+        setTab('diagram');
+        await new Promise<void>((r) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => r())),
+        );
+      }
+      const fn = exportPngRef.current;
+      if (!fn) {
+        toast.error('Не удалось подготовить экспорт');
+        return;
+      }
+      await fn(schema.name || 'er-diagram');
+      toast.success('PNG скачан');
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -228,10 +379,11 @@ function LibraryDetailView({
                 <button
                   type="button"
                   className={styles.actBtn}
-                  onClick={() => toast.info('Экспорт появится позже')}
+                  onClick={handleExportPng}
+                  disabled={exporting}
                 >
                   <Icon name="image" size={14} />
-                  <span>Экспорт PNG</span>
+                  <span>{exporting ? 'Экспорт…' : 'Экспорт PNG'}</span>
                 </button>
 
                 <button
@@ -277,22 +429,26 @@ function LibraryDetailView({
               <div className={styles.tagsBlock}>
                 <div className={`micro ${styles.tagsLabel}`}>Теги</div>
                 <div className={styles.tagsWrap}>
-                  {schema.tags.map((tag) => (
+                  {tagsLocal.map((tag) => (
                     <TagPill
                       key={tag.id}
                       name={tag.name}
                       color={tag.color}
-                      onRemove={() => toast.info('Управление тегами появится позже')}
+                      onRemove={() => handleToggleTag(tag.id)}
                     />
                   ))}
-                  <button
-                    type="button"
-                    className={styles.tagAddBtn}
-                    onClick={() => toast.info('Добавление тегов появится позже')}
-                  >
-                    <Icon name="plus" size={11} />
-                    Тег
-                  </button>
+                  <TagPicker
+                    allTags={allTags}
+                    selectedIds={tagsLocal.map((t) => t.id)}
+                    onToggle={handleToggleTag}
+                    onCreate={handleCreateTag}
+                    trigger={
+                      <span className={styles.tagAddBtn}>
+                        <Icon name="plus" size={11} />
+                        Тег
+                      </span>
+                    }
+                  />
                 </div>
               </div>
             </aside>
@@ -322,7 +478,9 @@ function LibraryDetailView({
       </div>
 
       <section className={styles.tabContent}>
-        {tab === 'diagram' && <ReadonlyERCanvas erData={schema.er_data} />}
+        {tab === 'diagram' && (
+          <ReadonlyERCanvas erData={schema.er_data} exportPngRef={exportPngRef} />
+        )}
 
         {tab === 'sql' && (
           <SqlView
@@ -343,11 +501,7 @@ function LibraryDetailView({
                     ? 'Заметок пока нет'
                     : `${notes.length} ${notes.length === 1 ? 'заметка' : 'заметки'}`}
                 </span>
-                <Button
-                  variant="ghost-sm"
-                  icon="plus"
-                  onClick={() => toast.info('Создание заметок появится позже')}
-                >
+                <Button variant="ghost-sm" icon="plus" onClick={openCreateNote}>
                   Заметка
                 </Button>
               </div>
@@ -356,11 +510,19 @@ function LibraryDetailView({
                   <Icon name="sticky-note" size={40} className={styles.notesEmptyIcon} />
                   <h3>Заметок пока нет</h3>
                   <p>Добавляйте заметки к таблицам или к схеме целиком, чтобы ничего не упустить.</p>
+                  <Button variant="primary" size="sm" icon="plus" onClick={openCreateNote}>
+                    Добавить первую
+                  </Button>
                 </div>
               ) : (
                 <ul className={styles.notesList}>
                   {notes.map((note) => (
-                    <NoteCard key={note.id} note={note} />
+                    <NoteCard
+                      key={note.id}
+                      note={note}
+                      onEdit={openEditNote}
+                      onDelete={handleDeleteNote}
+                    />
                   ))}
                 </ul>
               )}
@@ -384,6 +546,13 @@ function LibraryDetailView({
           setIsPublishedLocal(false);
           setForkCountLocal(0);
         }}
+      />
+      <NoteEditor
+        open={noteEditorOpen}
+        onClose={() => setNoteEditorOpen(false)}
+        note={editingNote}
+        tableNames={schemaTableNames}
+        onSubmit={handleSubmitNote}
       />
     </>
   );

@@ -33,7 +33,8 @@ function renderContent(text: string): ReactNode {
 
 export function MessageItem({ message }: MessageItemProps) {
   const isUser = message.role === 'user';
-  const isLoading = !isUser && !message.content;
+  const isError = !isUser && !!message.error;
+  const isLoading = !isUser && !isError && !message.content;
 
   return (
     <div className={styles.message}>
@@ -41,16 +42,23 @@ export function MessageItem({ message }: MessageItemProps) {
         {isUser ? 'ВЫ' : 'ИИ'}
       </div>
       <div className={styles.body}>
-        {isLoading ? (
+        {isLoading && (
           <div className={styles.loadingDots} aria-label="ИИ печатает">
             <span />
             <span />
             <span />
           </div>
-        ) : (
+        )}
+        {isError && (
+          <div className={styles.errorRow} role="alert">
+            <Icon name="circle-alert" size={14} />
+            <span>{message.error}</span>
+          </div>
+        )}
+        {!isLoading && !isError && (
           <p className={styles.text}>{renderContent(message.content)}</p>
         )}
-        {message.er_data && !isLoading && (
+        {message.er_data && !isLoading && !isError && (
           <div className={styles.appliedRow}>
             <Pill variant="success">
               <Icon name="check" size={12} /> Применено к схеме

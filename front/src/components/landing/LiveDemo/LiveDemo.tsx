@@ -13,7 +13,7 @@ export function LiveDemo() {
   return (
     <section className={styles.section}>
       <div className="container">
-        <div className={styles.head}>
+        <div className={styles.sectionHead}>
           <span className="micro">Демо</span>
           <h2>Опишите свою предметную область</h2>
           <p>Отредактируйте промпт ниже — диаграмма обновится.</p>

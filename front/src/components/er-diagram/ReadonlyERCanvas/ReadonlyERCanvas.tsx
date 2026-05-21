@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, type RefObject } from 'react';
 import {
   Background,
   ReactFlow,
@@ -12,13 +12,17 @@ import {
 import '@xyflow/react/dist/style.css';
 import { Icon } from '@/components/ui/Icon';
 import { TableNode } from '../TableNode';
+import { useExportPng, type ExportPngFn } from '@/lib/exportDiagramPng';
 import type { ERData } from '@/types';
 import styles from './ReadonlyERCanvas.module.css';
 
 const nodeTypes = { tableNode: TableNode };
 
+export type { ExportPngFn };
+
 interface ReadonlyERCanvasProps {
   erData: ERData;
+  exportPngRef?: RefObject<ExportPngFn | null>;
 }
 
 function ZoomControls() {
@@ -38,7 +42,16 @@ function ZoomControls() {
   );
 }
 
-function CanvasInner({ erData }: ReadonlyERCanvasProps) {
+function CanvasInner({ erData, exportPngRef }: ReadonlyERCanvasProps) {
+  const exportPng = useExportPng();
+  useEffect(() => {
+    if (!exportPngRef) return;
+    exportPngRef.current = exportPng;
+    return () => {
+      exportPngRef.current = null;
+    };
+  }, [exportPng, exportPngRef]);
+
   const nodes = useMemo<Node[]>(
     () => erData.nodes.map((n) => ({ ...n }) as unknown as Node),
     [erData.nodes],
@@ -55,7 +68,7 @@ function CanvasInner({ erData }: ReadonlyERCanvasProps) {
         type: 'smoothstep',
         animated: e.animated,
         label: e.label,
-        style: { stroke: 'url(#er-edge-gradient)', strokeWidth: 1.5 },
+        style: { stroke: '#06b6d4', strokeWidth: 1.75, strokeOpacity: 0.9 },
         labelStyle: { fill: 'var(--muted)', fontFamily: 'var(--mono)', fontSize: 10 },
         labelBgStyle: { fill: 'rgba(18, 18, 26, 0.9)' },
       })),
@@ -66,7 +79,14 @@ function CanvasInner({ erData }: ReadonlyERCanvasProps) {
     <div className={styles.wrap}>
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
         <defs>
-          <linearGradient id="er-edge-gradient" x1="0" y1="0" x2="1" y2="0">
+          <linearGradient
+            id="er-edge-gradient"
+            gradientUnits="userSpaceOnUse"
+            x1="0"
+            y1="0"
+            x2="1200"
+            y2="0"
+          >
             <stop offset="0" stopColor="#06b6d4" stopOpacity="0.7" />
             <stop offset="1" stopColor="#a855f7" stopOpacity="0.7" />
           </linearGradient>

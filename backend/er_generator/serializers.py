@@ -100,12 +100,22 @@ class ChatDetailSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'created_at', 'updated_at', 'messages']
 
 
-class ChatCreateSerializer(serializers.ModelSerializer):
-    """Сериализатор для создания чата."""
+class ChatSeedMessageSerializer(serializers.Serializer):
+    """Seed-сообщение, которое сохраняется как assistant-Message при создании чата.
+    Используется для открытия сохранённой схемы / форка в дашборде, чтобы
+    диаграмма и SQL пережили перезаход в чат.
+    """
 
-    class Meta:
-        model = Chat
-        fields = ['title']
+    content = serializers.CharField(max_length=5000, allow_blank=True)
+    er_data = serializers.JSONField(required=False, allow_null=True)
+    sql = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+
+class ChatCreateSerializer(serializers.Serializer):
+    """Сериализатор для создания чата (опционально с seed assistant-сообщением)."""
+
+    title = serializers.CharField(max_length=255, required=False, default='Новый чат')
+    seed_message = ChatSeedMessageSerializer(required=False)
 
 
 class ChatUpdateSerializer(serializers.ModelSerializer):
@@ -175,6 +185,7 @@ class SavedSchemaSerializer(serializers.ModelSerializer):
 
     tags = TemplateTagSerializer(many=True, read_only=True)
     notes = serializers.SerializerMethodField()
+    fork_count = serializers.SerializerMethodField()
 
     class Meta:
         model = SavedSchema
@@ -188,6 +199,16 @@ class SavedSchemaSerializer(serializers.ModelSerializer):
     @extend_schema_field(TableNoteSerializer(many=True))
     def get_notes(self, obj):
         return TableNoteSerializer(obj.notes.all(), many=True).data
+
+    @extend_schema_field(int)
+    def get_fork_count(self, obj) -> int:
+        # Источник правды — SchemaTemplate.fork_count: его инкрементит
+        # TemplateForkView. SavedSchema.fork_count никем не обновляется
+        # (остался от старой схемы данных) — используем как fallback.
+        tpl = getattr(obj, 'published_template', None)
+        if tpl:
+            return tpl.fork_count
+        return obj.fork_count
 
 
 class SavedSchemaCreateSerializer(serializers.ModelSerializer):

@@ -1,9 +1,9 @@
 .section { padding: 96px 0; }
 
-.head { margin-bottom: 44px; }
-.head .micro { display: block; margin-bottom: 14px; }
-.head h2 { max-width: 720px; }
-.head p { margin-top: 12px; max-width: 560px; }
+.sectionHead { margin-bottom: 44px; }
+.sectionHead .micro { display: block; margin-bottom: 14px; }
+.sectionHead h2 { max-width: 720px; }
+.sectionHead p { margin-top: 12px; max-width: 560px; }
 
 .demo {
   background: var(--surface);

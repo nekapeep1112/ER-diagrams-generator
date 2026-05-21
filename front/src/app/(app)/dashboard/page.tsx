@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { Workspace } from '@/components/dashboard/Workspace';
-import { fetchChats, fetchChat, createChat, sendMessage, renameChat, deleteChat } from '@/lib/api/chats';
+import { fetchChats, fetchChat, createChat, sendMessage, renameChat, deleteChat, generateTitle } from '@/lib/api/chats';
 import { createSchema, fetchSchema } from '@/lib/api/schemas';
 import { getErrorBody, getErrorMessage, getStatus } from '@/lib/error';
 import { useAuthStore } from '@/store/authStore';
@@ -80,7 +80,13 @@ function DashboardInner() {
     const openSchema = async (schemaId: string) => {
       const schema = await fetchSchema(schemaId);
       if (cancelled) return;
-      const chat = await createChat(schema.name);
+      // Создаём чат сразу с seed-сообщением — оно сохраняется в БД как
+      // обычный assistant-Message, поэтому переживёт перезаход в чат.
+      const chat = await createChat(schema.name, {
+        content: `📂 Загружена схема «${schema.name}». Опишите изменения — я их применю.`,
+        er_data: schema.er_data,
+        sql: schema.sql,
+      });
       if (cancelled) return;
       setChats((prev) => [
         {
@@ -88,25 +94,15 @@ function DashboardInner() {
           title: chat.title,
           created_at: chat.created_at,
           updated_at: chat.updated_at,
-          message_count: 1,
+          message_count: chat.messages.length,
         },
         ...prev,
       ]);
-      // Пропустить ближайший fetchChat — у нового чата на бэке 0 сообщений,
-      // он бы затёр наш synthetic message со схемой.
+      // У созданного чата уже есть seed-сообщение в БД — берём messages
+      // прямо из ответа, чтобы не делать лишний fetchChat-запрос.
       skipNextFetchChat.current = chat.id;
       setActiveChatId(chat.id);
-      // Synthetic message — workspace показывает диаграмму/SQL через memo по messages.
-      setMessages([
-        {
-          id: `synth-${schema.id}`,
-          role: 'assistant',
-          content: `📂 Загружена схема «${schema.name}». Опишите изменения — я их применю.`,
-          er_data: schema.er_data,
-          sql: schema.sql,
-          created_at: schema.created_at,
-        },
-      ]);
+      setMessages(chat.messages);
       toast.success(`Открыта схема «${schema.name}»`);
       // Чистим URL чтобы повторный открытий схемы не было при перезагрузке
       router.replace('/dashboard', { scroll: false });
@@ -209,6 +205,16 @@ function DashboardInner() {
   const handleSendMessage = useCallback(
     async (text: string) => {
       if (!activeChatId || sending) return;
+      // Пока у чата дефолтное название — генерируем title по ПЕРВОМУ
+      // юзерскому сообщению (а не последнему: иначе follow-up вроде
+      // "добавь колонку" даст невнятное имя). Перегенерация повторяется,
+      // пока не получится — после успеха title уже не "Новый чат".
+      const chatIdForTitle = activeChatId;
+      const hasDefaultTitle =
+        chats.find((c) => c.id === chatIdForTitle)?.title === 'Новый чат';
+      const existingFirstUserMessage = messages.find((m) => m.role === 'user');
+      const titlePrompt = existingFirstUserMessage?.content ?? text;
+
       const userTempId = `temp-u-${Date.now()}`;
       const placeholderId = `temp-a-${Date.now()}`;
       const userMsg: Message = {
@@ -220,7 +226,7 @@ function DashboardInner() {
       const placeholder: Message = {
         id: placeholderId,
         role: 'assistant',
-        content: '__generating__',
+        content: '',
         created_at: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, userMsg, placeholder]);
@@ -236,11 +242,42 @@ function DashboardInner() {
             m.id === userTempId ? user_message : m.id === placeholderId ? assistant_message : m,
           ),
         );
+        // Оптимистично бампим счётчик и updated_at, плюс поднимаем чат
+        // наверх списка — чтобы не ждать перезагрузки страницы.
+        const now = new Date().toISOString();
+        setChats((prev) => {
+          const updated = prev.map((c) =>
+            c.id === chatIdForTitle
+              ? { ...c, message_count: c.message_count + 2, updated_at: now }
+              : c,
+          );
+          const target = updated.find((c) => c.id === chatIdForTitle);
+          if (!target) return updated;
+          return [target, ...updated.filter((c) => c.id !== chatIdForTitle)];
+        });
+        if (hasDefaultTitle) {
+          generateTitle(chatIdForTitle, titlePrompt)
+            .then(({ title }) => {
+              setChats((prev) =>
+                prev.map((c) => (c.id === chatIdForTitle ? { ...c, title } : c)),
+              );
+            })
+            .catch(() => {
+              // Молча игнорируем — название чата не критично для UX.
+            });
+        }
       } catch (err) {
         const errMsg = getErrorMessage(err);
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === placeholderId ? { ...m, content: '__error__', error: errMsg } : m,
+            m.id === placeholderId ? { ...m, content: '', error: errMsg } : m,
+          ),
+        );
+        // Пользовательское сообщение всё равно сохранилось в БД до того,
+        // как упал OpenAI-вызов — бампим счётчик на +1.
+        setChats((prev) =>
+          prev.map((c) =>
+            c.id === chatIdForTitle ? { ...c, message_count: c.message_count + 1 } : c,
           ),
         );
         toast.error('Не удалось получить ответ. Попробуйте снова.');
@@ -248,7 +285,7 @@ function DashboardInner() {
         setSending(false);
       }
     },
-    [activeChatId, sending, defaultDialect],
+    [activeChatId, sending, defaultDialect, messages, chats],
   );
 
   // Reset notes when chat changes — заметки относятся к схеме, а не к чату.

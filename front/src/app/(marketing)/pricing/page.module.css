@@ -1,0 +1,399 @@
+/* ───── Hero ───── */
+
+.hero {
+  position: relative;
+  padding: 88px 0 48px;
+  overflow: hidden;
+}
+
+.glow {
+  position: absolute;
+  top: -120px;
+  left: 50%;
+  width: 900px;
+  height: 600px;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(6, 182, 212, 0.5) 0%,
+    rgba(168, 85, 247, 0.4) 40%,
+    transparent 70%
+  );
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.heroInner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.heroTitle {
+  max-width: 720px;
+  margin-top: 12px;
+}
+
+.heroLead {
+  max-width: 560px;
+  font-size: 16px;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+
+.toggle {
+  display: inline-flex;
+  padding: 4px;
+  margin-top: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  gap: 2px;
+}
+
+.toggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.toggleBtn:hover {
+  color: var(--text);
+}
+
+.toggleBtnActive {
+  background: var(--elevated);
+  color: var(--text);
+}
+
+.toggleSave {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--green);
+  background: rgba(74, 222, 128, 0.12);
+  border-radius: 999px;
+  padding: 2px 6px;
+}
+
+/* ───── Plan cards ───── */
+
+.plansSection {
+  padding: 32px 0 80px;
+}
+
+.plansGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  align-items: stretch;
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px 26px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.card:hover {
+  border-color: var(--border-hover);
+}
+
+.cardFeatured {
+  border-color: rgba(6, 182, 212, 0.4);
+  box-shadow: var(--glow);
+}
+
+.cardFeatured:hover {
+  border-color: rgba(6, 182, 212, 0.6);
+}
+
+.cardBadge {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.cardHead {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cardName {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.cardTag {
+  font-size: 13px;
+  color: var(--text-2);
+  margin: 0;
+}
+
+.cardPrice {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.priceValue {
+  font-size: 38px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: -0.76px;
+  line-height: 1;
+}
+
+.pricePer {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.priceHint {
+  width: 100%;
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.cardCta {
+  width: 100%;
+  justify-content: center;
+}
+
+.cardList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+}
+
+.cardItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.cardItemIcon {
+  color: var(--cyan);
+  flex-shrink: 0;
+}
+
+/* ───── Compare table ───── */
+
+.compareSection {
+  padding: 64px 0;
+  border-top: 1px solid var(--border);
+}
+
+.compareHead {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.compareTable {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.compareRow {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.compareRow:last-child {
+  border-bottom: 0;
+}
+
+.compareRow:first-child {
+  background: var(--elevated);
+}
+
+.compareCell {
+  font-size: 13px;
+  color: var(--text-2);
+  text-align: center;
+}
+
+.compareCell:first-child {
+  text-align: left;
+}
+
+.compareRow:first-child .compareCell {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.compareLabel {
+  color: var(--text);
+}
+
+.compareValue {
+  color: var(--text);
+}
+
+.checkIcon {
+  color: var(--cyan);
+  margin: 0 auto;
+}
+
+.dashIcon {
+  color: var(--disabled);
+  font-family: var(--mono);
+}
+
+/* ───── FAQ ───── */
+
+.faqSection {
+  padding: 64px 0;
+  border-top: 1px solid var(--border);
+}
+
+.faqHead {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.faqGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.faqItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.faqQ {
+  color: var(--text);
+}
+
+.faqA {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* ───── Final CTA ───── */
+
+.ctaSection {
+  padding: 64px 0 96px;
+}
+
+.ctaCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  padding: 48px 32px;
+  background: linear-gradient(
+    135deg,
+    rgba(6, 182, 212, 0.08) 0%,
+    rgba(168, 85, 247, 0.08) 100%
+  );
+  border: 1px solid var(--border-hover);
+  border-radius: 14px;
+}
+
+.ctaTitle {
+  max-width: 520px;
+}
+
+.ctaLead {
+  max-width: 480px;
+  font-size: 15px;
+  color: var(--text-2);
+}
+
+.ctaRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+/* ───── Responsive ───── */
+
+@media (max-width: 760px) {
+  .plansGrid {
+    grid-template-columns: 1fr;
+    max-width: 460px;
+  }
+  .faqGrid {
+    grid-template-columns: 1fr;
+  }
+  .compareRow {
+    grid-template-columns: 1.4fr repeat(2, 1fr);
+    padding: 14px 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .heroTitle {
+    font-size: 36px;
+  }
+  .compareSection,
+  .faqSection,
+  .ctaSection {
+    padding: 48px 0;
+  }
+  .ctaCard {
+    padding: 36px 20px;
+  }
+}

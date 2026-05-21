@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type RefObject } from 'react';
 import {
   Background,
   ReactFlow,
@@ -13,6 +13,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { Icon } from '@/components/ui/Icon';
 import { TableNode } from '@/components/er-diagram/TableNode';
+import { useExportPng, type ExportPngFn } from '@/lib/exportDiagramPng';
 import type { ERData, TableNote } from '@/types';
 import { GenChip } from './GenChip';
 import { ZoomControls } from './ZoomControls';
@@ -20,13 +21,25 @@ import styles from './DiagramView.module.css';
 
 const nodeTypes = { tableNode: TableNode };
 
+export type { ExportPngFn };
+
 interface DiagramViewProps {
   erData: ERData;
   notes: TableNote[];
   generating: boolean;
+  exportPngRef?: RefObject<ExportPngFn | null>;
 }
 
-function CanvasInner({ erData, notes, generating }: DiagramViewProps) {
+function CanvasInner({ erData, notes, generating, exportPngRef }: DiagramViewProps) {
+  const exportPng = useExportPng();
+  useEffect(() => {
+    if (!exportPngRef) return;
+    exportPngRef.current = exportPng;
+    return () => {
+      exportPngRef.current = null;
+    };
+  }, [exportPng, exportPngRef]);
+
   const initialNodes = useMemo<Node[]>(() => {
     const notesByTable = new Map<string, number>();
     for (const note of notes) {
@@ -56,7 +69,7 @@ function CanvasInner({ erData, notes, generating }: DiagramViewProps) {
         type: 'smoothstep',
         animated: e.animated,
         label: e.label,
-        style: { stroke: 'url(#dashboard-edge-gradient)', strokeWidth: 1.5 },
+        style: { stroke: '#06b6d4', strokeWidth: 1.75, strokeOpacity: 0.9 },
         labelStyle: { fill: 'var(--muted)', fontFamily: 'var(--mono)', fontSize: 10 },
         labelBgStyle: { fill: 'rgba(18, 18, 26, 0.9)' },
       })),
@@ -86,7 +99,14 @@ function CanvasInner({ erData, notes, generating }: DiagramViewProps) {
     <div className={styles.canvas}>
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
         <defs>
-          <linearGradient id="dashboard-edge-gradient" x1="0" y1="0" x2="1" y2="0">
+          <linearGradient
+            id="dashboard-edge-gradient"
+            gradientUnits="userSpaceOnUse"
+            x1="0"
+            y1="0"
+            x2="1200"
+            y2="0"
+          >
             <stop offset="0" stopColor="#06b6d4" stopOpacity="0.7" />
             <stop offset="1" stopColor="#a855f7" stopOpacity="0.7" />
           </linearGradient>

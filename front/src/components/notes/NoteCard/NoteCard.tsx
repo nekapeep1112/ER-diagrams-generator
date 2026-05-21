@@ -9,6 +9,8 @@ import styles from './NoteCard.module.css';
 
 interface NoteCardProps {
   note: TableNote;
+  onEdit?: (note: TableNote) => void;
+  onDelete?: (note: TableNote) => void | Promise<void>;
 }
 
 const TYPE_TO_VARIANT = {
@@ -25,8 +27,23 @@ const TYPE_LABEL = {
   todo: 'TODO',
 } as const;
 
-export function NoteCard({ note }: NoteCardProps) {
+export function NoteCard({ note, onEdit, onDelete }: NoteCardProps) {
   const variant = TYPE_TO_VARIANT[note.type];
+
+  const handleEdit = () => {
+    if (onEdit) onEdit(note);
+    else toast.info('Редактирование появится позже');
+  };
+
+  const handleDelete = () => {
+    if (!onDelete) {
+      toast.info('Удаление появится позже');
+      return;
+    }
+    if (!window.confirm('Удалить заметку?')) return;
+    void onDelete(note);
+  };
+
   return (
     <li className={styles.card}>
       <div className={styles.header}>
@@ -47,7 +64,7 @@ export function NoteCard({ note }: NoteCardProps) {
             type="button"
             className={styles.iconBtn}
             aria-label="Редактировать"
-            onClick={() => toast.info('Редактирование появится позже')}
+            onClick={handleEdit}
           >
             <Icon name="pencil" size={14} />
           </button>
@@ -55,7 +72,7 @@ export function NoteCard({ note }: NoteCardProps) {
             type="button"
             className={styles.iconBtn}
             aria-label="Удалить"
-            onClick={() => toast.info('Удаление появится позже')}
+            onClick={handleDelete}
           >
             <Icon name="trash" size={14} />
           </button>

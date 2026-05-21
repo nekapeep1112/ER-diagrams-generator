@@ -25,12 +25,6 @@ export function Hero() {
             <span className={styles.chip}>
               <span className={styles.chipDot} /> live preview
             </span>
-            <svg className={styles.edges} viewBox="0 0 540 460" preserveAspectRatio="none">
-              <path d="M 125 198 C 125 260, 200 280, 275 280" stroke="#2a2a3e" strokeWidth="1" fill="none" />
-              <circle cx="275" cy="280" r="2.5" fill="#06b6d4" />
-              <path d="M 424 198 C 424 260, 475 240, 475 280" stroke="#2a2a3e" strokeWidth="1" fill="none" />
-              <circle cx="475" cy="280" r="2.5" fill="#06b6d4" />
-            </svg>
 
             <div className={`${styles.floater} ${styles.f1}`}>
               <div className={styles.tableNode}>

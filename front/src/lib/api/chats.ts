@@ -1,6 +1,12 @@
 import { api, USE_MOCKS } from '../api';
 import { MOCK_CHATS, MOCK_MESSAGES_BY_CHAT, BILLING_SAAS_ER_DATA, BILLING_SAAS_SQL } from '@/lib/mocks';
-import type { Chat, ChatDetail, Message, MessageCreateResponse, SqlDialect } from '@/types';
+import type { Chat, ChatDetail, ERData, Message, MessageCreateResponse, SqlDialect } from '@/types';
+
+export interface ChatSeedMessage {
+  content: string;
+  er_data?: ERData;
+  sql?: string;
+}
 
 export async function fetchChats(search?: string): Promise<Chat[]> {
   if (USE_MOCKS) {
@@ -28,19 +34,39 @@ export async function fetchChat(id: string): Promise<ChatDetail> {
   return data;
 }
 
-export async function createChat(title?: string): Promise<ChatDetail> {
+export async function createChat(
+  title?: string,
+  seedMessage?: ChatSeedMessage,
+): Promise<ChatDetail> {
   if (USE_MOCKS) {
     const id = `mock-chat-${Date.now()}`;
+    const now = new Date().toISOString();
+    const messages: Message[] = seedMessage
+      ? [
+          {
+            id: `mock-seed-${Date.now()}`,
+            role: 'assistant',
+            content: seedMessage.content,
+            er_data: seedMessage.er_data ?? null,
+            sql: seedMessage.sql ?? null,
+            created_at: now,
+          },
+        ]
+      : [];
     return {
       id,
       title: title ?? 'Новый чат',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      message_count: 0,
-      messages: [],
+      created_at: now,
+      updated_at: now,
+      message_count: messages.length,
+      messages,
     };
   }
-  const { data } = await api.post('/chats/', { title: title ?? 'Новый чат' });
+  const payload: { title: string; seed_message?: ChatSeedMessage } = {
+    title: title ?? 'Новый чат',
+  };
+  if (seedMessage) payload.seed_message = seedMessage;
+  const { data } = await api.post('/chats/', payload);
   return data;
 }
 

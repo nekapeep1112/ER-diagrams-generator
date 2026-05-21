@@ -43,6 +43,11 @@ import {
   List,
   SearchX,
   Mail,
+  Sparkles,
+  Zap,
+  History,
+  Folder,
+  Shield,
 } from 'lucide-react';
 
 export const iconMap = {
@@ -90,6 +95,11 @@ export const iconMap = {
   'list': List,
   'search-x': SearchX,
   'mail': Mail,
+  'sparkles': Sparkles,
+  'zap': Zap,
+  'history': History,
+  'folder': Folder,
+  'shield': Shield,
 } as const;
 
 export type IconName = keyof typeof iconMap;
